@@ -1,5 +1,6 @@
 import pathlib
 import json
+import re
 
 from .lib import utils
 from . import sanitized_config as c
@@ -29,6 +30,8 @@ def generate_schema_from_network(network):
                     field = enum_name
                 struct[field_name] = field
             if struct:  # Don't allow empty structs
+                if network.split_senders:
+                    message_name = re.sub(r'_\d+$', '', message_name) # Regex to remove _<number> at the end of the name
                 schema["structs"][message_name] = struct
 
     return schema

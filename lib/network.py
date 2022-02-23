@@ -22,6 +22,7 @@ class Network:
         self.name_index = {}
         self.version = None
         self.max_payload_size = None
+        self.split_senders = None
 
         if path:
             self.load(path, validation_schema)
@@ -35,17 +36,26 @@ class Network:
 
         self.version = network["network_version"]
         self.max_payload_size = network["max_payload_size"]
+        self.split_senders = network.get("split_senders", False)
 
         self.types = network["types"] if "types" in network else {}
         
         for message in network["messages"]:
             message_name = message.pop("name")
+            sending_devices = message["sending"]
             if "topic" in message:
                 self.topics[message["topic"]] = None
             else:
                 self.topics["FIXED_IDS"] = None
                 message["topic"] = "FIXED_IDS"
-            self.messages[message_name] = message
+            if self.split_senders and len(sending_devices) > 1:
+                for device_id, device_name in enumerate(sending_devices):
+                    msg = message.copy()
+                    msg["sending"] = [device_name]
+                    generated_msg_name = f"{message_name}_{device_id}"
+                    self.messages[generated_msg_name] = msg
+            else:
+                self.messages[message_name] = message
                 
     def load_ids(self, path: str, validation_schema: str = None):
         self.ids_path = path
