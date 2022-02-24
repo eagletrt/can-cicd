@@ -40,12 +40,21 @@ class Network:
         
         for message in network["messages"]:
             message_name = message.pop("name")
+            split_senders = message.get("split_senders", False)
+            sending_devices = message["sending"]
             if "topic" in message:
                 self.topics[message["topic"]] = None
             else:
                 self.topics["FIXED_IDS"] = None
                 message["topic"] = "FIXED_IDS"
-            self.messages[message_name] = message
+            if split_senders and len(sending_devices) > 1:
+                for device_id, device_name in enumerate(sending_devices):
+                    msg = message.copy()
+                    msg["sending"] = [device_name]
+                    generated_msg_name = f"{message_name}_{device_id}"
+                    self.messages[generated_msg_name] = msg
+            else:
+                self.messages[message_name] = message
                 
     def load_ids(self, path: str, validation_schema: str = None):
         self.ids_path = path

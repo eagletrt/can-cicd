@@ -24,8 +24,8 @@ def generate_utils_include(network: Network):
     # Calculate maximum message name length
     msg_name_max_length = 1  # Minimum message name length must be at least 1
     for message_name, _ in network.get_messages().items():
-        if len(message_name) > msg_name_max_length:
-            msg_name_max_length = len(message_name)
+        if len(message_name) + 1 > msg_name_max_length: # 1 is added because of C strings (last char is '\0') 
+            msg_name_max_length = len(message_name) + 1
 
     code = j2.Template(utils_h).render(
         network=network,

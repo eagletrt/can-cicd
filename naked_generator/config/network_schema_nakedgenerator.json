@@ -42,6 +42,9 @@
 						"type": "string",
 						"pattern": "^[A-Z][A-Z0-9_]*$"
 					},
+					"split_senders": {
+						"type": "boolean"
+					},
 					"contents": {
 						"type": "object",
 						"patternProperties": {
