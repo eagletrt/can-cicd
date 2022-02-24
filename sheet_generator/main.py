@@ -60,6 +60,8 @@ def main():
                 
                 cols = [""] * len(columns)
                 for i, (key, value) in enumerate(message_contents.items()):
+                    if key == "split_senders":
+                        continue
                     cols[columns.index(key)] = re.sub(r"\[|]|'|{|}|\"", "", str(value))
                 writer.writerow(cols)
 

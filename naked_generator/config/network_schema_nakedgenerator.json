@@ -11,9 +11,6 @@
 	        "minimum": 0,
 	        "maximum": 65535
 	    },
-		"split_senders": {
-			"type": "boolean"
-		},
         "types": {
             "type": "object",
             "patternProperties": {
@@ -44,6 +41,9 @@
 					"name": {
 						"type": "string",
 						"pattern": "^[A-Z][A-Z0-9_]*$"
+					},
+					"split_senders": {
+						"type": "boolean"
 					},
 					"contents": {
 						"type": "object",
