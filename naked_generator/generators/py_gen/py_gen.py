@@ -4,19 +4,21 @@ from ... import schema as s
 import jinja2 as j2
 from ...lib import utils
 from ... import sanitized_config as c
+from ...lib.network import Network
 
 __TEST_TEMPLATE_PY = os.path.dirname(__file__) + "/template.py.j2"
 
 
-def generate(schema, output_path: str, filename: str):
+def generate(schema, network: Network, output_path: str, filename: str):
     structs, enums, bitsets = __parse_schema(schema)
+    frequencies = __frequencies(network)
 
     utils.create_subtree(output_path)
     with open(f"{output_path}/{filename}.py", "w") as f:
-        f.write(__generate_py(structs, enums, bitsets))
+        f.write(__generate_py(structs, enums, bitsets, frequencies))
 
 
-def __generate_py(structs, enums, bitsets):
+def __generate_py(structs, enums, bitsets, frequencies):
     endianness_tag = "<" if c.IS_LITTLE_ENDIAN else ">"
     with open(__TEST_TEMPLATE_PY, "r") as f:
         skeleton_py = f.read()
@@ -25,6 +27,7 @@ def __generate_py(structs, enums, bitsets):
         structs=structs,
         enums=enums,
         bitsets=bitsets,
+        frequencies=frequencies,
         format_string=__to_schema,
         endianness_tag=endianness_tag,
         fill_padding=__fill_padding
@@ -66,6 +69,10 @@ def __parse_schema(schema):
             bitsets.append(custom_type)
             
     return structs, enums, bitsets
+
+
+def __frequencies(network):
+    return {utils.to_camel_case(k,"_"): v for k,v in network.get_frequencies().items()}
 
 
 def __fill_padding(items):

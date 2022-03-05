@@ -17,7 +17,7 @@ def main():
         output_dir_network = output_dir / network.name
 
         schema_path = generate_schema(network, output_dir_network)
-        compile_schema(schema_path)
+        compile_schema(schema_path, network)
 
 
 if __name__ == "__main__":

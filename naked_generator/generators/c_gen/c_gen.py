@@ -5,6 +5,7 @@ from ... import schema as s
 import jinja2 as j2
 from ...lib import utils
 from ... import sanitized_config as c
+from ...lib.network import Network
 
 rd.seed(441285359149401)
 
@@ -12,8 +13,7 @@ __TEMPLATE_C = os.path.dirname(__file__) + "/template.c.j2"
 __TEMPLATE_H = os.path.dirname(__file__) + "/template.h.j2"
 __TEST_TEMPLATE_C = os.path.dirname(__file__) + "/test_template.c.j2"
 
-
-def generate(schema, output_path: str, filename: str):
+def generate(schema, network: Network, output_path: str, filename: str):
     """
     Generates the source files in the specified output path
     
@@ -23,11 +23,12 @@ def generate(schema, output_path: str, filename: str):
         filename:
     """
     structs, enums, bitsets = __parse_schema(copy.copy(schema), prefix=filename)
+    frequencies = __frequencies(network)
 
     utils.create_subtree(output_path)
 
     with open(f"{output_path}/{filename}.h", "w") as f:
-        f.write(__generate_h(structs, enums, bitsets, filename))
+        f.write(__generate_h(structs, enums, bitsets, frequencies, filename))
 
     with open(f"{output_path}/{filename}.c", "w") as f:
         f.write(__generate_c(structs, enums, bitsets, filename))
@@ -36,7 +37,7 @@ def generate(schema, output_path: str, filename: str):
         f.write(__generate_test_c(structs, enums, bitsets, filename))
 
 
-def __generate_h(structs, enums, bitsets, filename):
+def __generate_h(structs, enums, bitsets, frequencies, filename):
     """
     Generates C header file
     """
@@ -48,6 +49,7 @@ def __generate_h(structs, enums, bitsets, filename):
         structs=structs,
         enums=enums,
         bitsets=bitsets,
+        frequencies=frequencies,
         endianness_tag=endianness_tag,
         filename=filename,
         zip=zip,
@@ -138,6 +140,10 @@ def __parse_schema(schema, prefix):
         structs.append(struct)
 
     return structs, enums, bitsets
+
+
+def __frequencies(network):
+    return {f"{network.get_name()}_{k.upper()}": v for k,v in network.get_frequencies().items()} 
 
 
 def __fill_padding(struct):
@@ -239,7 +245,7 @@ def __format_string(struct):
             elif "int" in field_c_type:
                 format_string += "%lld "
         elif isinstance(field_type, s.Bool):
-                format_string += "%lld "
+            format_string += "%lld "
         elif isinstance(field_type, s.Enum):
             format_string += "%lld "
         elif isinstance(field_type, s.BitSet):
@@ -250,8 +256,7 @@ def __format_string(struct):
 
 def __read_struct(struct, instance_name="{instance_name}", selector="{selector}", cast=True):
     read_fields = []
-    struct_fields = {k: v for k,v in struct.fields.items() if not isinstance(v,s.Padding)}
-    for (field_name, field_type), cast in zip(struct_fields.items(), __printf_cast(struct)):
+    for (field_name, field_type), cast in zip(struct.fields.items(), __printf_cast(struct)):
         if isinstance(field_type, s.Padding):
             continue
         if isinstance(field_type, s.BitSet):
@@ -272,4 +277,6 @@ def __printf_cast(struct):
                 cast_fields.append("(long long unsigned int)")
         elif isinstance(item_type, s.BitSet):
             cast_fields.append("(char)")
+        else:
+            cast_fields.append("(void)")
     return cast_fields

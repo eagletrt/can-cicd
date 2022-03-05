@@ -1,5 +1,8 @@
 const byteify = require('byteify');
 {% for struct in structs %}
+    {%- if frequencies[struct.name] != 0 %}
+const {{ struct.name }}_ms = {{ frequencies[struct.name] }} 
+    {%- endif %}
 function serialize{{ struct.name }}(data) {
     return Uint8Array.from([
     {%- for field_name, field_type in struct.fields.items() %}

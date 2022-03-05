@@ -27,7 +27,9 @@ class {{ class_name }}:
     {% set parameters = ", ".join(fill_padding(struct.fields.keys())).replace("0x00, ", "") -%}
     struct = namedtuple("{{ class_name }}_struct", "{{ " ".join(struct.fields.keys()) }}", rename=True)
     schema = "{{ endianness_tag }}{{ format_string(struct.fields) }}"
-    
+    {%- if frequencies[struct.name] != 0 %}
+    frequency_ms = {{ frequencies[struct.name] }}
+    {% endif %}
     @staticmethod
     def serialize({{ parameters }}) -> bytes:
         return pack({{ class_name }}.schema, {{ parameters }})

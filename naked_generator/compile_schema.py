@@ -6,9 +6,9 @@ from . import sanitized_config as c
 from .generators.py_gen import py_gen
 from .generators.c_gen import c_gen
 from .generators.js_gen import js_gen
+from .lib.network import Network
 
-
-def compile_schema(schema_path: pathlib.Path):
+def compile_schema(schema_path: pathlib.Path, network: Network):
     # Load schema
     schema = Schema(schema_path, pack_structs=False)
 
@@ -17,17 +17,17 @@ def compile_schema(schema_path: pathlib.Path):
 
     if True:  # Generate python
         output_path_py = output_path / "py"
-        py_gen.generate(schema, output_path_py, file_name)
+        py_gen.generate(schema, network, output_path_py, file_name)
         print(f"Compiled schema {schema_path} for Python into {output_path_py}")
 
     if True:  # Generate c
         output_path_c = output_path / "c"
-        c_gen.generate(schema, output_path_c, file_name)
+        c_gen.generate(schema, network, output_path_c, file_name)
         print(f"Compiled schema {schema_path} for C into {output_path_c}")
 
     if True:  # Generate js
         output_path_js = output_path / "js"
-        js_gen.generate(schema, output_path_js, file_name)
+        js_gen.generate(schema, network, output_path_js, file_name)
         print(f"Compiled schema {schema_path} for JavaScript into {output_path_js}")
 
     print("")

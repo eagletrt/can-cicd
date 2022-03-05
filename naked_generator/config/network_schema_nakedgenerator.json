@@ -45,6 +45,9 @@
 					"split_senders": {
 						"type": "boolean"
 					},
+					"frequency": {
+						"type": "integer"
+					},
 					"contents": {
 						"type": "object",
 						"patternProperties": {
@@ -69,7 +72,7 @@
 						"additionalProperties": false
 					}
 				},
-				"required": ["name", "contents"],
+				"required": ["name"],
                 "additionalProperties": true
 			}
 		}

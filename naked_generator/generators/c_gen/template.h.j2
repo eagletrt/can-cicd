@@ -78,6 +78,7 @@ extern "C" {
     #define getBit(bitset, index)  ((bitset)[(index)/8] &  (1 << (index) % 8) )
 #endif
 
+
 {% for bitset in bitsets %}
 typedef uint8_t {{ bitset.name }}[{{ bitset.size_bytes }}]; // bitset
 #define {{ bitset.name }}_default { {{ ', '.join(['0']*bitset.size_bytes) }} } // bitset filled with zeros
@@ -96,6 +97,9 @@ typedef enum __is_packed {
 
 {% for struct in structs %}
 /* {{ struct.name }} */
+    {% if frequencies[struct.name] != 0 %}
+#define {{ struct.name.upper() }}_MS {{ frequencies[struct.name] }}
+    {% endif %}
 typedef struct __is_packed {
     {%- for item_name, c_type in zip(struct.fields.keys(), c_types(struct)) %}
     {{ c_type }} {{ item_name }};

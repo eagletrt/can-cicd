@@ -20,6 +20,7 @@ class Network:
         self.types = {}
         self.topics = {}
         self.name_index = {}
+        self.frequencies = {}
         self.version = None
         self.max_payload_size = None
 
@@ -42,6 +43,7 @@ class Network:
             message_name = message.pop("name")
             split_senders = message.get("split_senders", False)
             sending_devices = message["sending"]
+            self.frequencies[message_name] = message.get("frequency", 0)
             if "topic" in message:
                 self.topics[message["topic"]] = None
             else:
@@ -138,3 +140,9 @@ class Network:
         
     def get_types(self):
         return self.types
+
+    def get_name(self):
+        return self.name
+
+    def get_frequencies(self):
+        return self.frequencies

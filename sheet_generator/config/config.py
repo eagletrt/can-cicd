@@ -17,6 +17,7 @@ COLUMNS_ORDER = [
     "priority",
     "sending",
     "receiving",
+    "frequency",
     "contents",
     "description",
 ]

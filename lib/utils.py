@@ -124,4 +124,4 @@ def to_camel_case(string: str, delimiter=" "):
 
 
 def to_snake_case(string: str, delimiter=" "):
-    return "".join([x.capitalize() for x in string.split(delimiter)])
+    return "".join([x.lower() for x in string.split(delimiter)])

@@ -76,14 +76,13 @@ def main():
         # CAN config
         # TODO: generalize n cleanup
         canconfig_path = n.path.parent / "canconfig.json"
-        if not canconfig_path.exists():
-            continue
-        canconfig_file = utils.load_json(canconfig_path, c.CANCONFIG_VALIDATION_SCHEMA)
-        canconfig = canconfig_file["canconfig"]
-        canconfig_version = float(canconfig_file["canconfig_version"])
+        if canconfig_path.exists():
+            canconfig_file = utils.load_json(canconfig_path, c.CANCONFIG_VALIDATION_SCHEMA)
+            canconfig = canconfig_file["canconfig"]
+            canconfig_version = float(canconfig_file["canconfig_version"])
 
-        generate_canconfig_includes(canconfig, canconfig_version, n.name, output_dir_network)
-        print(f"Generated canconfig includes in {output_dir_network}")
+            generate_canconfig_includes(canconfig, canconfig_version, n.name, output_dir_network)
+            print(f"Generated canconfig includes in {output_dir_network}")
 
         print("")
 
