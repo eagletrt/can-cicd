@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package {{ filename }};
+{% for enum in enums %}
+enum {{ enum.name }} {
+    {%- for (name, index) in enum.type %}
+  {{ enum.name.upper()+"_"+name }} = {{ index }};
+    {%- endfor %}
+}
+{% endfor -%}
+{%- for struct in structs %}
+message {{ struct.name }} {
+    {%- for (index, name, type) in struct.fields %}
+    {{ type }} {{ name }} = {{ index }};
+    {%- endfor %}
+}
+{% endfor %}
