@@ -4,6 +4,15 @@
 
 #include "{{ filename }}.h"
 
+/*
+*   STDC Version check
+*   check if STDC version is greater or equal than the minimum version required
+*/
+#define NAKED_STDC_MIN_VERSION 201112L
+#if __STDC_VERSION__ < NAKED_STDC_MIN_VERSION
+	#error "** STDC VERSION NOT SUPPORTED **"
+#endif
+
 {% for struct in structs -%}
 /* {{ struct.name }} */
 size_t serialize_{{ struct.name }}(uint8_t* buffer, {{ ", ".join(parameters(struct)) }}) {
