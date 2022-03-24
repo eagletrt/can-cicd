@@ -1,7 +1,15 @@
 const byteify = require('byteify');
 {% for struct in structs %}
-    {%- if frequencies[struct.name] != 0 %}
-const {{ struct.name }}_ms = {{ frequencies[struct.name] }} 
+    {%- if frequencies[struct.name] != [] %}
+    {%- for freq in frequencies[struct.name] %}
+            {%- for frequency_name, frequency in freq.items() %}
+                {%- if frequency_name == "" %}
+const {{ struct.name }}_ms = {{ frequency }}
+                {%- else %}
+const {{ struct.name+""+utils.to_camel_case(frequency_name,"_") }}_ms = {{ frequency }}
+                {%- endif %}
+            {%- endfor %}
+        {%- endfor %}
     {%- endif %}
 function serialize{{ struct.name }}(data) {
     return Uint8Array.from([

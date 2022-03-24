@@ -33,7 +33,8 @@ def __generate_js(structs, enums, bitsets, frequencies):
         endianness_tag=endianness_tag,
         fill_padding=__fill_padding,
         js_type_name=__js_type_name,
-        ranges=__ranges
+        ranges=__ranges,
+        utils=utils
     )
 
     return code

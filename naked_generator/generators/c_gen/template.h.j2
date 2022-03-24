@@ -88,8 +88,16 @@ typedef enum __is_packed {
 
 {% for struct in structs %}
 /* {{ struct.name }} */
-    {% if frequencies[struct.name] != 0 %}
-#define {{ struct.name.upper() }}_MS {{ frequencies[struct.name] }}
+    {% if frequencies[struct.name] != [] %}
+        {%- for freq in frequencies[struct.name] %}
+            {%- for frequency_name, frequency in freq.items() %}
+                {%- if frequency_name == "" %}
+# define {{ struct.name.upper() }}_MS {{ frequency }}
+                {%- else %}
+# define {{ struct.name.upper() }}_{{ frequency_name }}_MS {{ frequency }}
+                {%- endif %}
+            {%- endfor %}
+        {%- endfor %}
     {% endif %}
 typedef struct __is_packed {
     {%- for item_name, c_type in zip(struct.fields.keys(), c_types(struct)) %}
