@@ -68,7 +68,8 @@ class Schema:
 
             self.__structs = []
             for struct_name, struct_fields in schema["structs"].items():
-                self.__structs.append(Struct(struct_name, struct_fields, fill=not pack_structs))
+                if struct_fields:
+                    self.__structs.append(Struct(struct_name, struct_fields, fill=not pack_structs))
 
     @property
     def structs(self):

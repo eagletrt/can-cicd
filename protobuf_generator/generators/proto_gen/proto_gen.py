@@ -1,27 +1,29 @@
 import os
 import jinja2 as j2
-from ..lib import utils
-from ..schema import Schema, BitSet, Enum
+from ...lib import utils
+from ...schema import Schema, BitSet, Enum
 
 __PROTO_TEMPLATE_ = os.path.dirname(__file__) + "/template.proto.j2"
 
 
 def generate(schema: Schema, filename, output_path):
-    bitsets, enums, structs = __parse_schema(schema)
+    enums, structs = __parse_schema(schema)
     utils.create_subtree(output_path)
     with open(f"{output_path}/{filename}.proto", "w") as f:
-        f.write(__generate_proto(filename, enums, bitsets, structs))
+        f.write(__generate_proto(filename, enums, structs))
 
-def __generate_proto(filename, enums, bitsets, structs):
+def __generate_proto(filename, enums, structs):
     with open(__PROTO_TEMPLATE_, "r") as f:
         skeleton_py = f.read()
 
     code = j2.Template(skeleton_py).render(
         filename=filename,
-        bitsets=bitsets,
         enums=enums,
         structs=structs,
-        # isinstance=isinstance,
+        utils=utils,
+        isinstance=isinstance,
+        BitSet=BitSet,
+        Enum=Enum
         # Type=Type,
         # enumerate=enumerate,
         # range=range,
@@ -33,8 +35,8 @@ def __generate_proto(filename, enums, bitsets, structs):
 
 
 def __parse_schema(schema: Schema):
-    bitsets = [type for type in schema.types if isinstance(type, BitSet)]
-    enums = [type for type in schema.types if isinstance(type, Enum)]
-    structs = [struct for struct in schema.structs]
+    enums = {k: v for k, v in schema.types.items() if isinstance(v, Enum)}
+    structs = schema.structs
+    # print([struct.fields for struct in schema.structs])
     
-    return bitsets, enums, structs
+    return enums, structs
