@@ -63,8 +63,12 @@ class Schema:
                         items = custom_type["items"]
                         types[type_name] = Enum(type_name, items)
                     elif type_class == "bitset":
-                        items = custom_type["items"]
-                        types[type_name] = BitSet(type_name, items)
+                        if custom_type.get("items", None) is not None:
+                            items = custom_type["items"]
+                            types[type_name] = BitSet(type_name, items=items)
+                        elif custom_type.get("size", None) is not None:
+                            size=custom_type["size"]
+                            types[type_name] = BitSet(type_name, size=size)
 
             self.__structs = []
             for struct_name, struct_fields in schema["structs"].items():
@@ -195,7 +199,7 @@ class Enum(Type):
 
 
 class BitSet(Type):
-    def __init__(self, name, items):
+    def __init__(self, name, items=None, size=None):
         """
             name = enum name
             items = [ITEM_NAME, ...]
@@ -203,11 +207,15 @@ class BitSet(Type):
 
         self.name = name
         self.precision = 1
-        self.items = [(item_name, item_index) for item_index, item_name in enumerate(items)]
-        self.range = (0, 2 ** len(items) - 1)
+        self.items = [(item_name, item_index) for item_index, item_name in enumerate(items)] if items else []
+        self.range = (0, 2 ** len(items) - 1) if items else (0, 2 ** size - 1)
 
-        size = math.ceil(len(items) / 8)
-        super(BitSet, self).__init__(size, size, len(items), 1)
+        bitset_size = math.ceil(len(items) / 8) if items else math.ceil(size / 8)
+
+        if len(self.items)==0 and bitset_size is not None:
+            super(BitSet, self).__init__(bitset_size, bitset_size, bitset_size, 1)
+        else:
+            super(BitSet, self).__init__(bitset_size, bitset_size, len(items), 1)
 
 
 class Number(Type):

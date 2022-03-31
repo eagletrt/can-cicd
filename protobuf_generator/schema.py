@@ -28,7 +28,10 @@ class Schema:
                 if type_description["type"] == "enum":
                     self.types[type_name]=Enum(type_name, type_description["items"])
                 elif type_description["type"] == "bitset":
-                    self.types[type_name]=BitSet(type_name, type_description["items"])
+                    if type_description.get("items", None) is not None:
+                        self.types[type_name]=BitSet(bitset_items=type_description["items"])
+                    elif type_description.get("size", None) is not None:
+                        self.types[type_name]=BitSet(bitset_size=type_description["size"])
                 else:
                     raise Exception(f"{type_description['type'].capitalize()} type not yet supported")
             
@@ -51,8 +54,8 @@ class EnumItem:
 
 
 class BitSet:
-    def __init__(self, type_name, bitset_items: list):
-        self.size = math.ceil(len(bitset_items))/8 
+    def __init__(self, bitset_items: list = None, bitset_size=None):
+        self.size = math.ceil(len(bitset_items))/8 if bitset_items else math.ceil(bitset_size/8)
         self.proto_type = "uint32" if self.size<=4 else "uint64"
 
 

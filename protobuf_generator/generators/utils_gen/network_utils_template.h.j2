@@ -1,16 +1,20 @@
 #include <string>
-#include <iostream>
 #include "{{ filename }}.pb.h"
-#ifdef __cplusplus
 extern "C" {
 #include "../../../../naked_generator/{{ filename }}/c/{{ filename }}.h"
 }
-#endif
 
 #define BITSET_VALUE(bitset, size) \
     bitset_value=0; \
-    for(size_t i = 0; i < size*8; i++){ \
-        bitset_value += getBit(bitset, i); \
+    short current_value=0; \
+    for(short i = 0; i < size*8; i++){ \
+        current_value += getBit(bitset, i); \
+        if(i%8 == 7){ \
+            short shift_amount = i/8; \
+            current_value <<= 8*shift_amount; \
+            bitset_value += current_value; \
+            current_value = 0; \
+        } \
     }
 
 std::string {{ filename }}_naked2protobuf(uint32_t id, uint8_t* payload){
