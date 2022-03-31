@@ -7,17 +7,23 @@ from ...lib import utils
 from ...schema import Schema, BitSet, Enum, Number
 
 
-__UTILS_NETWORK_TEMPLATE_ = os.path.dirname(__file__) + "/network_utils_template.h.j2"
+__UTILS_CPP_TEMPLATE_ = os.path.dirname(__file__) + "/network_utils_template.h.j2"
+__UTILS_PYTHON_TEMPLATE_ = os.path.dirname(__file__) + "/network_utils_template.py.j2"
 
 
 def generate(schema: Schema, network: Network, filename, utils_dir_network):
     types, structs, messages = __parse_schema(schema, network)
 
-    with open(f"{utils_dir_network}/{filename}_utils.h", "w") as f:
-        f.write(__generate_network_utils(filename, types, structs, messages))
+    with open(f"{utils_dir_network}/cpp/{filename}_utils.h", "w") as f:
+        f.write(__generate_cpp_utils(filename, types, structs, messages))
+    print(f"Generated {filename}_utils.h into {utils_dir_network}/cpp")
 
-def __generate_network_utils(filename, types, structs, messages):
-    with open(__UTILS_NETWORK_TEMPLATE_, "r") as f:
+    with open(f"{utils_dir_network}/python/{filename}_utils.py", "w") as f:
+        f.write(__generate_python_utils(filename, types, structs, messages))
+    print(f"Generated {filename}_utils.py into {utils_dir_network}/python")
+
+def __generate_cpp_utils(filename, types, structs, messages):
+    with open(__UTILS_CPP_TEMPLATE_, "r") as f:
         skeleton_py = f.read()
 
     code = j2.Template(skeleton_py).render(
@@ -34,9 +40,22 @@ def __generate_network_utils(filename, types, structs, messages):
 
     return code
 
+
+def __generate_python_utils(filename, types, structs, messages):
+    with open(__UTILS_PYTHON_TEMPLATE_, "r") as f:
+        skeleton_py = f.read()
+
+    code = j2.Template(skeleton_py).render(
+        filename=filename,
+        messages=messages,
+        utils=utils
+    )
+
+    return code
+
+
 def __parse_schema(schema: Schema, network: Network):
-    # bitsets = [type for type in schema.types if isinstance(type, BitSet)]
-    # enums = [type for type in schema.types if isinstance(type, Enum)]
+
     types = schema.types
     structs = schema.structs
     messages = {}

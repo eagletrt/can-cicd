@@ -20,44 +20,42 @@ extern "C" {
 std::string {{ filename }}_naked2protobuf(uint32_t id, uint8_t* payload){
     uint64_t bitset_value;
     switch(id) {
-{% for message_name, message_ids in messages.items() %}
-    {%- for message_id in message_ids %}
-        case {{ message_id }}:
+{%+ for message_name, message_ids in messages.items() %}
+        {% for message_id in message_ids %}case {{ message_id }}: {% endfor -%}
         {
-        {%- set camel_case_name = utils.to_camel_case(message_name,"_") %}
-        {%- if structs[message_name].fields %}
+    {%- set camel_case_name = utils.to_camel_case(message_name,"_") %}
+    {%- if structs[message_name].fields %}
             {{ filename }}_{{ message_name }}* {{ filename }}_{{ message_name.lower() }}_d = ({{ filename }}_{{ message_name }}*)malloc(sizeof({{ filename }}_{{ message_name }}));
             deserialize_{{ filename }}_{{ message_name }}(payload, {{ filename }}_{{ message_name.lower() }}_d);
-        {%- endif%}
+    {%- endif%}
 
             {{ filename }}::{{ camel_case_name }} {{ filename }}_{{ message_name.lower() }}_p;
-        {%- if structs[message_name].fields %}
-            {%- for field in structs[message_name].fields %}
-                {%- set snake_case_name = utils.to_snake_case(field.name) %}
-                {%- if isinstance(field.type, BitSet) %}
+    {%- if structs[message_name].fields %}
+        {%- for field in structs[message_name].fields %}
+            {%- set snake_case_name = utils.to_snake_case(field.name) %}
+            {%- if isinstance(field.type, BitSet) %}
             BITSET_VALUE({{ filename }}_{{ message_name.lower() }}_d->{{ field.name }}, sizeof({{ filename }}_{{ message_name.lower() }}_d->{{ field.name }}))
             {{ filename }}_{{ message_name.lower() }}_p.set_{{ snake_case_name -}}
                 (bitset_value);
-                {%- elif isinstance(field.type, Enum) %}
+            {%- elif isinstance(field.type, Enum) %}
             {{ filename }}_{{ message_name.lower() }}_p.set_{{ snake_case_name -}}
                 (static_cast<{{ filename }}::{{ utils.to_camel_case(field.type.proto_type,"_") }}>({{ filename }}_{{ message_name.lower() }}_d->{{ field.name }}));
-                {%- elif isinstance(field.type, Number) %}
+            {%- elif isinstance(field.type, Number) %}
             {{ filename }}_{{ message_name.lower() }}_p.set_{{ snake_case_name -}}
                 (static_cast<{{ field.type.original_type }} 
-                    {%- if "int" in field.type.original_type %}_t{% endif -%}
+            {%- if "int" in field.type.original_type %}_t{% endif -%}
                 >({{ filename }}_{{ message_name.lower() }}_d->{{ field.name }}));
-                {%- else %}
+            {%- else %}
                 {{ filename }}_{{ message_name.lower() }}_p.set_{{ snake_case_name }}({{ filename }}_{{ message_name.lower() }}_d->{{ field_name }});
-                {%- endif %}
-            {%- endfor %}
-        {%- endif %}
+            {%- endif %}
+        {%- endfor %}
+    {%- endif %}
 
             std::string serialized;
             {{ filename }}_{{ message_name.lower() }}_p.SerializeToString(&serialized);
             return serialized;
         }
-    {% endfor %}
-{%- endfor %}
+{% endfor %}
     }
     throw std::runtime_error("Unknown message id");
 }

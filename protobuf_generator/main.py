@@ -2,10 +2,11 @@ import subprocess
 import os
 import sys
 import pathlib
+
 from shutil import which
 from .lib import utils
 from .compile_schema import compile_schema
-from .generate_utils import generate_utils
+from .generators.utils_gen.utils_gen import generate
 
 
 def get_protoc_executable():
@@ -61,7 +62,7 @@ def main():
         schema = compile_schema(schema_path, proto_dir)
         compile_proto_files(proto_dir, output_dir_network, network.name)
 
-        generate_utils(network, schema, utils_dir_network)
+        generate(schema, network, network.name, utils_dir_network)
 
         print("")
 
