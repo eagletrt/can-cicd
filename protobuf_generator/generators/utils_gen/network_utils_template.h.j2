@@ -42,8 +42,8 @@ std::string {{ filename }}_naked2protobuf(uint32_t id, uint8_t* payload){
                 (static_cast<{{ filename }}::{{ utils.to_camel_case(field.type.proto_type,"_") }}>({{ filename }}_{{ message_name.lower() }}_d->{{ field.name }}));
             {%- elif isinstance(field.type, Number) %}
             {{ filename }}_{{ message_name.lower() }}_p.set_{{ snake_case_name -}}
-                (static_cast<{{ field.type.original_type }} 
-            {%- if "int" in field.type.original_type %}_t{% endif -%}
+                (static_cast<{{ field.type.proto_type }}
+            {%- if "int" in field.type.proto_type %}_t{% endif -%}
                 >({{ filename }}_{{ message_name.lower() }}_d->{{ field.name }}));
             {%- else %}
                 {{ filename }}_{{ message_name.lower() }}_p.set_{{ snake_case_name }}({{ filename }}_{{ message_name.lower() }}_d->{{ field_name }});
