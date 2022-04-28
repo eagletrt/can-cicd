@@ -6,7 +6,7 @@ import pathlib
 from shutil import which
 from .lib import utils
 from .compile_schema import compile_schema
-from .generators.utils_gen.utils_gen import generate
+from .generators.utils_gen.utils_gen import generate_utils
 
 
 def get_protoc_executable():
@@ -23,13 +23,12 @@ def get_protoc_executable():
 
 def read_args(argv):
     # TODO: standardize
-    if len(argv) != 5 or argv[1] in ["--help", "-h"]:
+    if len(argv) != 4 or argv[1] in ["--help", "-h"]:
         raise ValueError("Usage: python3 main.py <networks_path> <id_path> <naked_path> <output_path>")
 
     networks_dir = pathlib.Path(argv[1])
     id_dir = pathlib.Path(argv[2])
-    naked_dir = pathlib.Path(argv[3])
-    output_dir = pathlib.Path(argv[4])
+    output_dir = pathlib.Path(argv[3])
 
     if not networks_dir.exists() or not networks_dir.is_dir():
         raise ValueError(f"Path {networks_dir} does not exist or it is not a directory")
@@ -37,32 +36,28 @@ def read_args(argv):
     if not id_dir.exists() or not id_dir.is_dir():
         raise ValueError(f"Path {id_dir} does not exist or it is not a directory")
 
-    if not naked_dir.exists() or not naked_dir.is_dir():
-        raise ValueError(f"Path {naked_dir} does not exist or it is not a directory")
-
     if output_dir.is_file():
         raise ValueError(f"Path {output_dir} is a file")
 
-    return networks_dir, id_dir, naked_dir, output_dir
+    return networks_dir, id_dir, output_dir
 
 
 def main():
     print("====== flatbuf-generator ======")
     print("")
 
-    networks_dir, id_dir, naked_dir, output_dir = read_args(sys.argv)
+    networks_dir, id_dir, output_dir = read_args(sys.argv)
     networks = utils.load_networks(networks_path=networks_dir, ids_path=id_dir)
 
     for network in networks:
         proto_dir = output_dir / "dev"
         output_dir_network = output_dir / "gen" / network.name
         utils_dir_network = output_dir_network
-        schema_path = naked_dir / network.name / "schema.json"
 
-        schema = compile_schema(schema_path, proto_dir)
+        schema = compile_schema(network, proto_dir)
         compile_proto_files(proto_dir, output_dir_network, network.name)
 
-        generate(schema, network, network.name, utils_dir_network)
+        generate_utils(schema, network, network.name, utils_dir_network)
 
         print("")
 

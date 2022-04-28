@@ -1,7 +1,8 @@
 import sys
 
-from .generate_schema import generate_schema
-from .compile_schema import compile_schema
+# from .get_data import get_data_from_network
+from .schema import Schema
+from .generate_code import generate_code
 from . import sanitized_config as c
 from .lib import utils
 
@@ -16,8 +17,8 @@ def main():
     for network in networks:
         output_dir_network = output_dir / network.name
 
-        schema_path = generate_schema(network, output_dir_network)
-        compile_schema(schema_path, network)
+        schema = Schema(network)
+        generate_code(network.name, schema, output_dir_network)
 
 
 if __name__ == "__main__":

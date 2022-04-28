@@ -1,29 +1,26 @@
 #include <assert.h>
 #include <stdint.h>
-#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "{{ filename }}.h"
 
 int main() {
-{% for struct in structs %}
-/* {{ struct.name }} */
-    printf("{{ struct.name }}:\n");
-    {% set buffer_name = "buffer_" + struct.name.lower() -%}
-    uint8_t* {{ buffer_name }} = (uint8_t*)malloc(sizeof({{ struct.name }}));
-    
-    {% set struct_name_s = struct.name.lower() + "_s" -%}
-    {{ struct.name }} {{ struct_name_s }} = { {{ ", ".join(random_values(struct)) }} };
-    serialize_{{ struct.name }}({{ buffer_name }}, {{ struct_name_s + "." + ", {}.".format(struct_name_s).join(fields(struct)) }});
-    printf("\tSerialized\n\t{{ format_string(struct) }}\n", {{ read_struct(struct, struct_name_s, ".")}});
-    
-    {% set struct_name_d = struct.name.lower() + "_d" -%}
-    {{ struct.name }}* {{ struct_name_d }} = ({{ struct.name }}*)malloc(sizeof({{ struct.name }}));
-    deserialize_{{ struct.name }}({{ buffer_name }}, {{ struct_name_d }});
-    printf("\tDeserialized\n\t{{ format_string(struct) }}\n", {{ read_struct(struct, struct_name_d, "->") }});
-    
-    assert(memcmp(&{{ struct_name_s }}, {{ struct_name_d }}, sizeof({{ struct.name }})) == 0);
-    puts("SUCCESS!\n");
-        
-{% endfor -%}
+{% for message in messages %}
+    printf("***{{ utils.to_camel_case(message.name,"_") }}Msg***\n");
+    uint8_t buffer_{{ utils.to_camel_case(message.name,"_") }}[{{ buffer_size(message.name) }}];
+    {{ utils.to_camel_case(message.name,"_") }}Msg {{ utils.to_camel_case(message.name,"_") }}_s = { {{ ", ".join(random_values(message.fields)) }} };
+    {% if len(message.fields) > 0 %}
+    printf("Before: {{ " ".join(printf_cast(message.fields)) }}\n", {{ ", ".join(printf_arguments_cast(message,"s")) }});
+    {% endif %}
+    serialize_{{ utils.to_camel_case(message.name,"_") }}(buffer_{{ utils.to_camel_case(message.name,"_") }}, &{{ utils.to_camel_case(message.name,"_") }}_s);
+    {{ utils.to_camel_case(message.name,"_") }}Msg {{ utils.to_camel_case(message.name,"_") }}_d;
+    deserialize_{{ utils.to_camel_case(message.name,"_") }}(buffer_{{ utils.to_camel_case(message.name,"_") }}, &{{ utils.to_camel_case(message.name,"_") }}_d);
+    {% if len(message.fields) > 0 %}
+    printf("After:  {{ " ".join(printf_cast(message.fields)) }}\n", {{ ", ".join(printf_arguments_cast(message,"d")) }});
+    {% endif %}
+    assert(memcmp(&{{ utils.to_camel_case(message.name,"_") }}_s, &{{ utils.to_camel_case(message.name,"_") }}_d, sizeof({{ utils.to_camel_case(message.name,"_") }}Msg)) == 0);
+    printf("\n");
+{% endfor %}
+    return 0;
 }

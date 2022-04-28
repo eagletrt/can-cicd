@@ -1,48 +1,72 @@
 from enum import IntEnum, IntFlag
 from struct import pack, unpack
-from collections import namedtuple
 
-{%- for bitset in bitsets %}
+# Bitsets
 
-class {{ bitset.name }}(IntFlag):
-    {%- for item_name, item_value in bitset.items %}
-    {{ item_name }} = {{ 2**item_value }}
-    {%- endfor %}
-
-{%- endfor %}
-
-{%- for enum in enums %}
-    
-class {{ enum.name }}(IntEnum):
-    {%- for item_name, item_value in enum.items %}
-    {{ item_name }} = {{ item_value }}
-    {%- endfor %}
-    
-{%- endfor %}
-
-{% for struct in structs -%}
-{%- set class_name = struct.name %}
-# {{ class_name }}
-class {{ class_name }}:
-    {% set parameters = ", ".join(fill_padding(struct.fields.keys())).replace("0x00, ", "") -%}
-    struct = namedtuple("{{ class_name }}_struct", "{{ " ".join(struct.fields.keys()) }}", rename=True)
-    schema = "{{ endianness_tag }}{{ format_string(struct.fields) }}"
-    {%- if frequencies[struct.name] != [] %}
-        {%- for freq in frequencies[struct.name] %}
-            {%- for frequency_name, frequency in freq.items() %}
-                {%- if frequency_name == "" %}
-    frequency_ms = {{ frequency }}
-                {%- else %}
-    frequency_{{ frequency_name.lower() }}_ms = {{ frequency }}
-                {%- endif %}
-            {%- endfor %}
+{% for bitset in bitsets -%}
+class {{ bitset.name }}({{ "IntFlag" if len(bitset.superclass) == 0 }}):
+    {%- if len(bitset.content) != 0 %}
+        {%- for bits in bitset.content %}
+    {{ bits.item }} = {{ 2**bits.index }}
         {%- endfor %}
-    {% endif %}
-    @staticmethod
-    def serialize({{ parameters }}) -> bytes:
-        return pack({{ class_name }}.schema, {{ parameters }})
-    
-    @staticmethod
-    def deserialize(buffer: bytes) -> "{{ class_name }}.struct":
-        return {{ class_name }}.struct._make(unpack({{ class_name }}.schema, buffer))
+    {%- elif len(bitset.superclass) != 0 %}
+        {%- for field in bitset.superclass %}
+    {{ field.lower() }} = {{ utils.to_camel_case('{}_{}'.format(filename, field),'_') }}(0)
+        {%- endfor %}
+    {%- else %}
+    pass
+    {%- endif %}
+
+{% endfor -%}
+
+# Enums
+
+{% for enum in enums -%}
+class {{ enum.name }}(IntEnum):
+    {%- for values in enum.content %}
+    {{ values.item }} = {{ values.index }}
+    {%- endfor %}
+
+{% endfor -%}
+
+# Messages
+
+{% for message in messages -%}
+class {{ utils.to_camel_case(message.name,"_") }}Msg:
+    def __init__({{ ", ".join(params(message.fields)) }}):
+    {%- if len(message.fields) != 0 %}
+        {%- for field in message.fields %}
+        if {{ field.name }} is not None:
+            self.{{ field.name }} = {{ python_type_name(field) }}({{ field.name }})
+        {%- endfor %}
+    {%- endif %}
+        self.size = {{ message.size }}
+    {%- if message.frequency != -1 %}
+        self.millis = {{ message.frequency }}
+    {%- endif %}
+
+    def serialize(self):
+    {%- for field in fields_serialization(message, messages_size) %}
+        {{ field }}
+    {%- endfor %}
+
+    def deserialize(self, data):
+    {%- for field in fields_deserialization(message, messages_size) %}
+        {{ field }}
+    {%- endfor %}
+
+    def __eq__(self, other):
+        if not isinstance(other, {{ utils.to_camel_case(message.name,"_") }}Msg):
+            return False
+        {%- for field in message.fields %}
+            {%- if isinstance(field.type, Number) and 'float' in field.type.name %}
+        if abs(self.{{ field.name }}-other.{{ field.name }}) > 0.001:
+            return False
+            {%- else %}
+        if self.{{ field.name }} != other.{{ field.name }}:
+            {%- endif %}
+            return False
+        {%- endfor %}
+        return True
+
 {% endfor -%}

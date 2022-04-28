@@ -43,15 +43,8 @@ class Network:
             message_name = message.pop("name")
             split_senders = message.get("split_senders", False)
             sending_devices = message["sending"]
-            message_frequency = message.get("frequency", [])
-            if message_frequency != []:
-                for frequency in message_frequency:
-                    if isinstance(frequency, int):
-                        self.frequencies[message_name] = [{"": frequency}]
-                    elif isinstance(frequency, dict):
-                        self.frequencies[message_name] = message_frequency
-            else:
-                self.frequencies[message_name] = []
+            message_frequency = message.get("frequency", -1)
+            self.frequencies[message_name] = message_frequency
             if "topic" in message:
                 self.topics[message["topic"]] = None
             else:

@@ -1,19 +1,18 @@
 import os
-import copy
-import random as rd
-from ... import schema as s
-import jinja2 as j2
-from ...lib import utils
-from ... import sanitized_config as c
-from ...lib.network import Network
+import random
 
-rd.seed(441285359149401)
+from numpy import append
+import jinja2 as j2
+
+from ... import sanitized_config as c
+from ...lib import utils
+from ... import schema
 
 __TEMPLATE_C = os.path.dirname(__file__) + "/template.c.j2"
 __TEMPLATE_H = os.path.dirname(__file__) + "/template.h.j2"
 __TEST_TEMPLATE_C = os.path.dirname(__file__) + "/test_template.c.j2"
 
-def generate(schema, network: Network, output_path: str, filename: str):
+def generate(filename: str, schema: schema.Schema, output_path: str):
     """
     Generates the source files in the specified output path
     
@@ -22,66 +21,43 @@ def generate(schema, network: Network, output_path: str, filename: str):
         output_path:
         filename:
     """
-    structs, enums, bitsets = __parse_schema(copy.copy(schema), prefix=filename)
-    frequencies = __frequencies(network)
+    enums, bitsets = __parse_schema(schema.types, filename)
 
     utils.create_subtree(output_path)
 
     with open(f"{output_path}/{filename}.h", "w") as f:
-        f.write(__generate_h(structs, enums, bitsets, frequencies, filename))
-
-    with open(f"{output_path}/{filename}.c", "w") as f:
-        f.write(__generate_c(structs, enums, bitsets, filename))
+        f.write(__generate_h(filename, schema.messages, schema.messages_size, enums, bitsets))
 
     with open(f"{output_path}/test.c", "w") as f:
-        f.write(__generate_test_c(structs, enums, bitsets, filename))
+        f.write(__generate_test_c(filename, schema.messages, enums, bitsets))
 
 
-def __generate_h(structs, enums, bitsets, frequencies, filename):
+def __generate_h(filename, messages, messages_size, enums, bitsets):
     """
     Generates C header file
     """
     endianness_tag = "LITTLE_ENDIAN" if c.IS_LITTLE_ENDIAN else "BIG_ENDIAN"
+
     with open(__TEMPLATE_H, "r") as f:
         template_h = f.read()
 
     code = j2.Template(template_h).render(
-        structs=structs,
-        enums=enums,
         bitsets=bitsets,
-        frequencies=frequencies,
+        enums=enums,
+        messages=messages,
+        messages_size=messages_size,
         endianness_tag=endianness_tag,
         filename=filename,
-        zip=zip,
-
-        c_types=__c_types,
-        parameters=__parameters
+        casts=__casts,
+        fields_serialization=__fields_serialization,
+        fields_deserialization=__fields_deserialization,
+        utils=utils,
     )
 
     return code
 
 
-def __generate_c(structs, enums, bitsets, filename):
-    """
-    Generates C source file
-    """
-    with open(__TEMPLATE_C, "r") as f:
-        template_c = f.read()
-
-    code = j2.Template(template_c).render(
-        structs=structs,
-        enums=enums,
-        bitsets=bitsets,
-        filename=filename,
-
-        parameters=__parameters,
-        fill_padding=__fill_padding,
-    )
-
-    return code
-
-
-def __generate_test_c(structs, enums, bitsets, filename):
+def __generate_test_c(filename, messages, enums, bitsets):
     """
     Generates C source file for tests
     """
@@ -89,26 +65,20 @@ def __generate_test_c(structs, enums, bitsets, filename):
         test_template_c = f.read()
 
     code = j2.Template(test_template_c).render(
-        structs=structs,
-        enums=enums,
-        bitsets=bitsets,
+        messages=messages,
         filename=filename,
-
-        read_struct=__read_struct,
-        format_string=__format_string,
+        len=len,
+        printf_cast=__printf_cast,
+        printf_arguments_cast=__printf_arguments_cast,
         random_values=__random_values,
-        fields=__fields
+        utils=utils,
+        buffer_size=__buffer_size,
     )
 
     return code
 
 
-"""
-    Utility functions used for template rendering
-"""
-
-
-def __parse_schema(schema, prefix):
+def __parse_schema(types, prefix):
     """
     Parses generic schema to a more C friendly one
     
@@ -124,159 +94,175 @@ def __parse_schema(schema, prefix):
     """
     bitsets = []
     enums = []
-    for type_name, custom_type in schema.get_types().items():
-        if isinstance(custom_type, s.Enum):
-            custom_type.name = f"{prefix}_{custom_type.name}"
+    for type_name, custom_type in types.items():
+        if isinstance(custom_type, schema.Enum):
+            custom_type.name = f"{prefix}_{type_name}"
             enums.append(custom_type)
 
-        if isinstance(custom_type, s.BitSet):
-            custom_type.name = f"{prefix}_{custom_type.name}"
+        if isinstance(custom_type, schema.BitSet):
+            custom_type.name = f"{prefix}_{type_name}"
             bitsets.append(custom_type)
 
-    # Adding fields used for rendering
-    structs = []
-    for struct in schema.structs:
-        struct.name = f"{prefix}_{struct.name}"
-        structs.append(struct)
-
-    return structs, enums, bitsets
+    return enums, bitsets
 
 
-def __frequencies(network):
-    return {f"{network.get_name()}_{k.upper()}": v for k,v in network.get_frequencies().items()} 
-
-
-def __fill_padding(struct):
-    new_items = []
-    for item_name, item_type in struct.fields.items():
-        if isinstance(item_type, s.Padding):
-            new_items.append("0x00")
-        elif isinstance(item_type, s.BitSet):
-            new_items.append("{" + ", ".join([f"{item_name}[{i}]" for i in range(0, item_type.size_bytes)]) + "}")
+def __printf_arguments_cast(message, name: str):
+    fields = []
+    for field in message.fields:
+        if not isinstance(field.type, schema.BitSet):
+            fields.append(f"{utils.to_camel_case(message.name,'_')}_{name}.{field.name}")
         else:
-            new_items.append(item_name)
-    return new_items
+            for i in range(0, field.bit_size // 8):
+                fields.append(f"{utils.to_camel_case(message.name,'_')}_{name}.{field.name}[{i}]")
+    return fields
 
 
 def __fields(struct):
     return [field_name for field_name, field_type in struct.fields.items() if not isinstance(field_type, s.Padding)]
 
 
-def __parameters(struct):
-    return [f"{field_c_type} {field_name}"
-            for (field_name, field_type), field_c_type
-            in zip(struct.fields.items(), __c_types(struct))
-            if not isinstance(field_type, s.Padding)]  # skip unused fields such as padding bytes
+def __convert(field, index):
+    return [f"(data[{index+number_index+1}] << {8*(number_index+1)})" for number_index in range(field.bit_size // 8 - 1)]
 
 
-def __random_values(struct):
+def __params(fields):
+    return [ f"msg->{field.name} << {field.shift}" if field.shift != 0 else f"msg.{field.name}" for field in fields ]
+
+
+def __random_values(fields):
     values = []
-    for field_name, field_type in struct.fields.items():
-        if isinstance(field_type, s.Enum):
-            values.append(str(rd.randrange(*field_type.range)))
-        elif isinstance(field_type, s.BitSet):
-            values.append(
-                "{" + ", ".join([str(rd.randrange(0, 2 ** 8)) for _ in range(0, field_type.size_bytes)]) + "}")
-        elif isinstance(field_type, s.Padding):
-            values.append("0")
+
+    for field in fields:
+        if isinstance(field.type, schema.BitSet):
+            values.append(f"{{ {', '.join([str(random.randint(0, 255)) for _ in range((field.bit_size // 8))])} }}")
+        elif isinstance(field.type, schema.Enum):
+            values.append(f"{random.randint(0, (2 ** (field.bit_size-1)))}")
+        elif 'uint' in field.type.name:
+            values.append(f"{random.randint(0, (2 ** field.bit_size) - 1)}")
+        elif 'int' in field.type.name:
+            values.append(f"{random.randint(-2 ** (field.bit_size-1), (2 ** (field.bit_size-1)) - 1)}")
+        elif 'float' in field.type.name:
+            values.append(f"{random.uniform(0, 1)}")
         else:
-            f = 1 / field_type.precision
-            values.append(str(rd.randrange(
-                field_type.range[0] * f,
-                field_type.range[1] * f,
-                field_type.precision * f) / f))
+            values.append(f"{random.randint(0, 1)}")
+
     return values
 
 
-def __c_types(struct):
-    return [__c_type_name(field_type) for field_name, field_type in struct.fields.items()]
+def __casts(name: str):
+    match name:
+        case 'uint8':
+            return 'uint8_t'
+        case 'uint16':
+            return 'uint16_t'
+        case 'uint32':
+            return 'uint32_t'
+        case 'uint64':
+            return 'uint64_t'
+        case 'int8':
+            return 'int8_t'
+        case 'int16':
+            return 'int16_t'
+        case 'int32':
+            return 'int32_t'
+        case 'int64':
+            return 'int64_t'
+        case 'float32':
+            return 'float'
+        case 'float64':
+            return 'double'
+        case 'bool':
+            return 'bool'
+        case _:
+            return utils.to_camel_case(name,"_")
 
 
-def __c_type_name(item_type):
-    if isinstance(item_type, s.Bool):
-        return "bool"
+def __printf_cast(fields):
+    casts = []
+    for field in fields:
+        if isinstance(field.type, schema.Number):
+            match field.type.name:
+                case 'float32':
+                    casts.append('%f')
+                case 'float64':
+                    casts.append('%lf')
+                case 'int8':
+                    casts.append('%hhd')
+                case 'int16':
+                    casts.append('%hd')
+                case 'int32':
+                    casts.append('%d')
+                case 'int64':
+                    casts.append('%ld')
+                case 'uint8':
+                    casts.append('%hhu')
+                case 'uint16':
+                    casts.append('%hu')
+                case 'uint32':
+                    casts.append('%u')
+                case 'uint64':
+                    casts.append('%lu')
+                case 'bool':
+                    casts.append('%d')
+        elif isinstance(field.type, schema.Enum):
+            casts.append("%d")
+        elif isinstance(field.type, schema.BitSet):
+            casts.append(".".join(["%hhx"] * (field.bit_size // 8)))
+    return casts
 
-    elif isinstance(item_type, s.Number):
-        size = item_type.size_bytes
-        number_type = ""
-        if item_type.precision >= 1:
-            if item_type.range[0] >= 0:
-                number_type += "u"
-            if size <= 1:
-                number_type += "int8"
-            elif size <= 2:
-                number_type += "int16"
-            elif size <= 4:
-                number_type += "int32"
-            elif size <= 8:
-                number_type += "int64"
-            return number_type + "_t"
-        else:
-            if size > 4:
-                return "double"  # TODO
+
+def __float_deserialize(field, index):
+    return [f"data[{index+byte_index}]" for byte_index in range(field.bit_size // 8)]
+
+
+def __fields_serialization(index, fields):
+    serializated_fields = []
+
+    if fields:
+        if len(fields) == 1 and fields[0].bit_size >= 8:
+            field = fields[0]
+            if isinstance(field.type, schema.BitSet):
+                for bitset_index in range(field.bit_size // 8):
+                    serializated_fields.append(f"data[{index+bitset_index}] = msg->{field.name}[{bitset_index}];")
+            elif isinstance(field.type, schema.Number) and (field.type.name == 'float32' or field.type.name == 'float64'):
+                for byte_index in range(field.bit_size // 8):
+                    serializated_fields.append(f"data[{index+byte_index}] = (({__casts(field.type.name)}_t) msg->{field.name}).bytes[{byte_index}];")
+            elif field.bit_size > 8:
+                serializated_fields.append(f"data[{index}] = msg->{field.name} & 255;")
+                for number_index in range(1, field.bit_size // 8):
+                    serializated_fields.append(f"data[{index+number_index}] = (msg->{field.name} >> {number_index*8}) & 255;")
             else:
-                return "float"
-
-    elif isinstance(item_type, s.Enum):
-        return item_type.name
-
-    elif isinstance(item_type, s.BitSet):
-        return item_type.name
-
-    elif isinstance(item_type, s.Padding):
-        return "uint8_t"
-
-
-def __format_string(struct):
-    format_string = ""
-    for field_c_type, (field_name, field_type) in zip(__c_types(struct), struct.fields.items()):
-        if isinstance(field_type, s.Padding):
-            continue
-        elif isinstance(field_type, s.Number):
-            # Float32
-            if "float32" == field_c_type:
-                format_string += "%lf "
-            # Float64
-            elif "float64" == field_c_type:
-                format_string += "%lf "
-            # Ints
-            elif "uint" in field_c_type:
-                format_string += "%llu "
-            elif "int" in field_c_type:
-                format_string += "%lld "
-        elif isinstance(field_type, s.Bool):
-            format_string += "%lld "
-        elif isinstance(field_type, s.Enum):
-            format_string += "%lld "
-        elif isinstance(field_type, s.BitSet):
-            format_string += ".".join(["%hhx"] * field_type.size_bytes) + " "
-
-    return format_string.strip()
-
-
-def __read_struct(struct, instance_name="{instance_name}", selector="{selector}", cast=True):
-    read_fields = []
-    for (field_name, field_type), cast in zip(struct.fields.items(), __printf_cast(struct)):
-        if isinstance(field_type, s.Padding):
-            continue
-        if isinstance(field_type, s.BitSet):
-            for i in range(0, field_type.size_bytes):
-                read_fields.append(f"{cast}{instance_name}{selector}{field_name}[{i}]")
+                serializated_fields.append(f"data[{index}] = msg->{field.name};")
         else:
-            read_fields.append(f"{cast}{instance_name}{selector}{field_name}")
-    return ", ".join(read_fields)
+            serializated_fields.append(f"data[{index}] = {' | '.join(__params(fields))};")
+
+    return serializated_fields
 
 
-def __printf_cast(struct):
-    cast_fields = []
-    for item_type in struct.fields.values():
-        if hasattr(item_type, "range"):
-            if item_type.range[0] < 0:
-                cast_fields.append("(long long int)")
+def __fields_deserialization(index, fields):
+    deserializated_fields = []
+
+    if fields:
+        if len(fields) == 1 and fields[0].bit_size >= 8:
+            field = fields[0]
+            if isinstance(field.type,schema.BitSet):
+                for bitset_index in range(field.bit_size // 8):
+                    deserializated_fields.append(f"msg->{field.name}[{bitset_index}] = data[{index+bitset_index}];")
+            elif isinstance(field.type, schema.Number) and (field.type.name == 'float32' or field.type.name == 'float64'):
+                deserializated_fields.append("msg->{} = ((float_t) {}).value;".format(field.name,"{"+str(', '.join(__float_deserialize(field, index)))+"}"))
+            elif field.bit_size > 8:
+                deserializated_fields.append(f"msg->{field.name} = data[{index}] | {' | '.join(__convert(field, index))};")
             else:
-                cast_fields.append("(long long unsigned int)")
-        elif isinstance(item_type, s.BitSet):
-            cast_fields.append("(char)")
+                deserializated_fields.append(f"msg->{field.name} = data[{index}];")
         else:
-            cast_fields.append("(void)")
-    return cast_fields
+            for field in fields:
+                if field.type.name != "bool":
+                    deserializated_fields.append(f"msg->{field.name} = ({__casts(field.type.name)}) ((data[{index}] & {field.bit_mask}) >> {field.shift});")
+                else:
+                    deserializated_fields.append(f"msg->{field.name} = (data[{index}] & {field.bit_mask}) >> {field.shift};")
+
+    return deserializated_fields
+
+
+def __buffer_size(message_name):
+    return utils.to_snake_case(f"{message_name}_size").upper()

@@ -46,7 +46,7 @@
 						"type": "boolean"
 					},
 					"frequency": {
-						"type": "array"
+						"type": "integer"
 					},
 					"contents": {
 						"type": "object",

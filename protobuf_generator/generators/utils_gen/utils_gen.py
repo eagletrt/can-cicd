@@ -11,7 +11,7 @@ __UTILS_CPP_TEMPLATE_ = os.path.dirname(__file__) + "/network_utils_template.h.j
 __UTILS_PYTHON_TEMPLATE_ = os.path.dirname(__file__) + "/network_utils_template.py.j2"
 
 
-def generate(schema: Schema, network: Network, filename, utils_dir_network):
+def generate_utils(schema: Schema, network: Network, filename, utils_dir_network):
     types, structs, messages = __parse_schema(schema, network)
 
     with open(f"{utils_dir_network}/cpp/{filename}_utils.h", "w") as f:

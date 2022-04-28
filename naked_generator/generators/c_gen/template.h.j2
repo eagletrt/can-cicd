@@ -8,7 +8,6 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 #include <assert.h>
-#include <stdio.h>
 
 /*
 *   NAKED SHARED 
@@ -69,47 +68,77 @@ extern "C" {
     #define getBit(bitset, index)  ((bitset)[(index)/8] &  (1 << (index) % 8) )
 #endif
 
+// Types
 
-{% for bitset in bitsets %}
-typedef uint8_t {{ bitset.name }}[{{ bitset.size_bytes }}]; // bitset
-#define {{ bitset.name }}_default { {{ ', '.join(['0']*bitset.size_bytes) }} } // bitset filled with zeros
-    {%- for item_name, item_value in bitset.items %}
-#define {{ bitset.name }}_{{ item_name }} {{ item_value }}
+typedef union {
+    uint8_t bytes[4];
+    float value;
+} float_t;
+
+typedef union {
+    uint8_t bytes[8];
+    double value;
+} double_t;
+
+// Frequencies
+
+{%- for message in messages %}
+    {%- if message.frequency != -1 %}
+#define {{ utils.to_snake_case(message.name).upper() }}_MS {{ message.frequency }}
+    {%- endif %}
+{%- endfor %}
+
+// Sizes
+
+{%- for message in messages %}
+#define {{ utils.to_snake_case(message.name).upper() }}_SIZE {{ message.size }}
+{%- endfor %}
+
+// Bitsets
+{% for bitset in bitsets -%}
+typedef uint8_t {{ utils.to_camel_case(bitset.name,"_") }}[{{ bitset._bit_size // 8 }}];
+#define {{ utils.to_snake_case(bitset.name).upper() }}_DEFAULT { {{ ", ".join(["0"] * (bitset.size // 8)) }} }
+    {%- for bits in bitset.content %}
+#define {{ utils.to_snake_case(bitset.name).upper() }}_{{ bits.item.upper() }} {{ bits.index }}
     {%- endfor %}
-{% endfor -%}
 
-{% for enum in enums %}
+{% endfor -%}
+// Enums
+{% for enum in enums -%}
 typedef enum __is_packed {
-    {%- for item_name, item_value in enum.items %}
-    {{ enum.name }}_{{ item_name }} = {{ item_value }},
+    {%- for values in enum.content %}
+    {{ enum.name }}_{{ values.item }} = {{ values.index }},
     {%- endfor %}
-} {{ enum.name }};
-{% endfor -%}
+} {{ utils.to_camel_case(enum.name,"_") }};
 
-{% for struct in structs %}
-/* {{ struct.name }} */
-    {% if frequencies[struct.name] != [] %}
-        {%- for freq in frequencies[struct.name] %}
-            {%- for frequency_name, frequency in freq.items() %}
-                {%- if frequency_name == "" %}
-# define {{ struct.name.upper() }}_MS {{ frequency }}
-                {%- else %}
-# define {{ struct.name.upper() }}_{{ frequency_name }}_MS {{ frequency }}
-                {%- endif %}
-            {%- endfor %}
-        {%- endfor %}
-    {% endif %}
+{% endfor -%}
+// Structs
+{% for message in messages -%}
 typedef struct __is_packed {
-    {%- for item_name, c_type in zip(struct.fields.keys(), c_types(struct)) %}
-    {{ c_type }} {{ item_name }};
+    {%- for field in message.fields %}
+    {{ casts(field.type.name) }} {{ field.name }};
     {%- endfor %}
-} {{ struct.name }};
-static_assert(sizeof({{ struct.name }}) == {{ struct.size_bytes }}, "struct size mismatch");
-    
-size_t serialize_{{ struct.name }}(uint8_t* buffer, {{ ", ".join(parameters(struct)) }});
-size_t deserialize_{{ struct.name }}(uint8_t* buffer, {{ struct.name }}* {{ struct.name.lower() }});
-{% endfor -%}
+} {{ utils.to_camel_case(message.name,"_") }}Msg;
 
+{% endfor -%}
+// Functions
+{% for message_name, message_index in messages_size.items() %}
+void serialize_{{ utils.to_camel_case(message_name,"_") }}(uint8_t *data, {{ utils.to_camel_case(message_name,"_") }}Msg *msg){
+    {%- for index, fields in message_index.items() -%}
+        {%- for field in fields_serialization(index, fields) %}
+    {{ field }}
+        {%- endfor %}
+    {%- endfor %}
+}
+
+void deserialize_{{ utils.to_camel_case(message_name,"_") }}(uint8_t *data, {{ utils.to_camel_case(message_name,"_") }}Msg *msg){
+    {%- for index, fields in message_index.items() -%}
+        {%- for field in fields_deserialization(index, fields) %}
+    {{ field }}
+        {%- endfor %}
+    {%- endfor %}
+}
+{% endfor %}
 #endif
 
 #ifdef __cplusplus
