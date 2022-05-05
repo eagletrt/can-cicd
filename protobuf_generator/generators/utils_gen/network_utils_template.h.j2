@@ -26,8 +26,8 @@ std::string {{ filename }}_naked2protobuf(uint32_t id, uint8_t* payload){
         {
     {%- set camel_case_name = utils.to_camel_case(message_name,"_") %}
     {%- if structs[message_name].fields %}
-            {{ filename }}_{{ message_name }}* {{ filename }}_{{ message_name.lower() }}_d = ({{ filename }}_{{ message_name }}*)malloc(sizeof({{ filename }}_{{ message_name }}));
-            deserialize_{{ filename }}_{{ message_name }}(payload, {{ filename }}_{{ message_name.lower() }}_d);
+            {{ utils.to_camel_case(filename,"_") }}{{ camel_case_name }}Msg* {{ filename }}_{{ message_name.lower() }}_d = ({{ utils.to_camel_case(filename,"_") }}{{ camel_case_name }}Msg*)malloc({{ filename.upper() }}_{{ message_name }}_SIZE);
+            deserialize_{{ utils.to_camel_case(filename,"_") }}{{ camel_case_name }}(payload, {{ filename }}_{{ message_name.lower() }}_d);
     {% endif%}
             {{ filename }}::{{ camel_case_name }} {{ filename }}_{{ message_name.lower() }}_p;
     {%- if structs[message_name].fields %}

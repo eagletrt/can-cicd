@@ -18,7 +18,7 @@
             {%- endfor %}
 */
         {%- endif %}
-#define ID_{{ message_name }} 0b{{ "{0:>011b}".format(message_contents["id"]) }}
+#define {{ network.name.upper() }}_ID_{{ message_name }} 0b{{ "{0:>011b}".format(message_contents["id"]) }}
     {%- endfor -%}
 {% endfor %}
 

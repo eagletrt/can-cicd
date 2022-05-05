@@ -16,7 +16,7 @@ def generate_ids_include(network: Network):
                 for line in message_contents["description"].split("\n"):
                     header += f"{line}\n"
                 header += '"""\n'
-            header += f"ID_{message_name} = 0b{message_contents['id']:>011b}\n"
+            header += f"{network.name.upper()}_ID_{message_name} = 0b{message_contents['id']:>011b}\n"
         header += "\n"
 
     return header

@@ -23,9 +23,9 @@ def __generate_proto(filename, enums, structs):
         utils=utils,
         isinstance=isinstance,
         BitSet=BitSet,
-        Enum=Enum
+        Enum=Enum,
         # Type=Type,
-        # enumerate=enumerate,
+        enumerate=enumerate,
         # range=range,
         # zip=zip,
         # utils=utils

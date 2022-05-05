@@ -96,8 +96,8 @@ typedef union {
 
 // Bitsets
 {% for bitset in bitsets -%}
-typedef uint8_t {{ utils.to_camel_case(bitset.name,"_") }}[{{ bitset._bit_size // 8 }}];
-#define {{ utils.to_snake_case(bitset.name).upper() }}_DEFAULT { {{ ", ".join(["0"] * (bitset.size // 8)) }} }
+typedef uint8_t {{ utils.to_camel_case(bitset.name,"_") }}[{{ bitset.byte_size }}];
+#define {{ utils.to_snake_case(bitset.name).upper() }}_DEFAULT { {{ ", ".join(["0"] * (bitset.byte_size)) }} }
     {%- for bits in bitset.content %}
 #define {{ utils.to_snake_case(bitset.name).upper() }}_{{ bits.item.upper() }} {{ bits.index }}
     {%- endfor %}
@@ -107,7 +107,7 @@ typedef uint8_t {{ utils.to_camel_case(bitset.name,"_") }}[{{ bitset._bit_size /
 {% for enum in enums -%}
 typedef enum __is_packed {
     {%- for values in enum.content %}
-    {{ enum.name }}_{{ values.item }} = {{ values.index }},
+    {{ enum.name.upper() }}_{{ values.item }} = {{ values.index }},
     {%- endfor %}
 } {{ utils.to_camel_case(enum.name,"_") }};
 
