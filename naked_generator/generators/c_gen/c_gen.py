@@ -1,7 +1,6 @@
 import os
 import random
 
-from numpy import append
 import jinja2 as j2
 
 from ... import sanitized_config as c
