@@ -1,9 +1,6 @@
-from fileinput import isfirstline
 import os
 import random
 import math
-
-from numpy import isin
 
 from ... import schema as s
 import jinja2 as j2
