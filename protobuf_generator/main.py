@@ -24,7 +24,7 @@ def get_protoc_executable():
 def read_args(argv):
     # TODO: standardize
     if len(argv) != 4 or argv[1] in ["--help", "-h"]:
-        raise ValueError("Usage: python3 main.py <networks_path> <id_path> <naked_path> <output_path>")
+        raise ValueError("Usage: python3 main.py <networks_path> <id_path> <output_path>")
 
     networks_dir = pathlib.Path(argv[1])
     id_dir = pathlib.Path(argv[2])
