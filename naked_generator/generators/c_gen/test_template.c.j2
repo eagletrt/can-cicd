@@ -19,7 +19,7 @@ int main() {
     {% if len(message.fields) > 0 %}
     printf("After:  {{ " ".join(printf_cast(message.fields)) }}\n", {{ ", ".join(printf_arguments_cast(message,"d")) }});
     {% endif %}
-    assert(memcmp(&{{ utils.to_camel_case(message.name,"_") }}_s, &{{ utils.to_camel_case(message.name,"_") }}_d, sizeof({{ utils.to_camel_case(message.name,"_") }}Msg)) == 0);
+    assert(memcmp(&{{ utils.to_camel_case(message.name,"_") }}_s, &{{ utils.to_camel_case(message.name,"_") }}_d, {{ message.name.upper() }}_SIZE) == 0);
     printf("\n");
 {% endfor %}
     return 0;
