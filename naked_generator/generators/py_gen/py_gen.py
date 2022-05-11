@@ -13,6 +13,7 @@ __TEST_TEMPLATE_PY = os.path.dirname(__file__) + "/test_template.py.j2"
 
 schema_msgs = {}
 
+
 def generate(filename: str, schema: schema.Schema, output_path: str):
     enums, bitsets = __parse_schema(schema.types, filename)
     # frequencies = __frequencies(network)
@@ -20,10 +21,19 @@ def generate(filename: str, schema: schema.Schema, output_path: str):
     utils.create_subtree(output_path)
 
     with open(f"{output_path}/{filename}.py", "w") as f:
-        f.write(__generate_py(filename, schema.messages, schema.messages_size, enums, bitsets))
+        f.write(
+            __generate_py(
+                filename, schema.messages, schema.messages_size, enums, bitsets
+            )
+        )
 
     with open(f"{output_path}/test.py", "w") as f:
-        f.write(__generate_py_test(filename, schema.messages, schema.messages_size, enums, bitsets))
+        f.write(
+            __generate_py_test(
+                filename, schema.messages, schema.messages_size, enums, bitsets
+            )
+        )
+
 
 def __generate_py(filename, messages, messages_size, enums, bitsets):
     endianness_tag = "<" if c.IS_LITTLE_ENDIAN else ">"
@@ -43,8 +53,9 @@ def __generate_py(filename, messages, messages_size, enums, bitsets):
         utils=utils,
         isinstance=isinstance,
         Number=schema.Number,
-        fields_deserialization = __fields_deserialization,
-        fields_serialization = __fields_serialization
+        fields_deserialization=__fields_deserialization,
+        fields_serialization=__fields_serialization,
+        already_timestamp=__already_timestamp,
     )
 
     return code
@@ -72,6 +83,7 @@ def __generate_py_test(filename, messages, messages_size, enums, bitsets):
     Utility functions used for template rendering
 """
 
+
 def __parse_schema(types, prefix):
     """
     Parses generic schema to a more Python friendly one
@@ -89,11 +101,11 @@ def __parse_schema(types, prefix):
     enums = []
     for type_name, custom_type in types.items():
         if isinstance(custom_type, schema.Enum):
-            custom_type.name = utils.to_camel_case(f"{prefix}_{type_name}",'_')
+            custom_type.name = utils.to_camel_case(f"{prefix}_{type_name}", "_")
             enums.append(custom_type)
 
         if isinstance(custom_type, schema.BitSet):
-            custom_type.name = utils.to_camel_case(f"{prefix}_{type_name}" ,'_')
+            custom_type.name = utils.to_camel_case(f"{prefix}_{type_name}", "_")
             bitsets.append(custom_type)
 
     return enums, bitsets
@@ -116,7 +128,7 @@ def __packing_schema(name, msg):
 
 def __struct_schema(field: schema.Field):
     if isinstance(field.type, schema.BitSet):
-        return "B"*math.ceil(field.type.size/8)
+        return "B" * math.ceil(field.type.size / 8)
     else:
         return __struct_format(field.type)
 
@@ -149,12 +161,17 @@ def __struct_format(number):
             case "bool":
                 return "B"
             case _:
-                raise NotImplementedError(f"Can't convert {number.name} to format for python's pack unpack functions")
+                raise NotImplementedError(
+                    f"Can't convert {number.name} to format for python's pack unpack functions"
+                )
+
 
 def __args(message: schema.Message, variable: str):
     attributes = []
     for field in message.fields:
-        attributes.append(f"{{{utils.to_camel_case(message.name,'_')}_{variable}.{field.name}}}")
+        attributes.append(
+            f"{{{utils.to_camel_case(message.name,'_')}_{variable}.{field.name}}}"
+        )
     return attributes
 
 
@@ -162,7 +179,11 @@ def __pack_fields(msg: dict):
     fields = []
     for _, items in msg.items():
         if len(items) > 1:
-            fields.append(" | ".join([f"self.{item.name} << {item.shift} & 255" for item in items]))
+            fields.append(
+                " | ".join(
+                    [f"self.{item.name} << {item.shift} & 255" for item in items]
+                )
+            )
         elif len(items) == 1:
             item = items[0]
             if item.shift == 0:
@@ -191,11 +212,13 @@ def __random_values(fields):
             values.append(value)
         elif isinstance(field.type, schema.Enum):
             values.append(f"{random.randint(0, (2 ** (field.bit_size-1)))}")
-        elif 'uint' in field.type.name:
+        elif "uint" in field.type.name:
             values.append(f"{random.randint(0, (2 ** field.bit_size) - 1)}")
-        elif 'int' in field.type.name:
-            values.append(f"{random.randint(-2 ** (field.bit_size-1), (2 ** (field.bit_size-1)) - 1)}")
-        elif 'float' in field.type.name:
+        elif "int" in field.type.name:
+            values.append(
+                f"{random.randint(-2 ** (field.bit_size-1), (2 ** (field.bit_size-1)) - 1)}"
+            )
+        elif "float" in field.type.name:
             values.append(f"{random.uniform(0, 1)}")
         else:
             values.append(f"{random.randint(0, 1)}")
@@ -209,15 +232,15 @@ def __custom_unpack_schema(msg_name, msg, field_name):
     for index, items in msg.items():
         if field_name in [item.name for item in items]:
             if len(items) > 1:
-                schema+="B"
-                max_index = index+2
+                schema += "B"
+                max_index = index + 2
             elif len(items) == 1:
                 item = items[0]
                 bytes = __struct_schema(item)
-                schema+=bytes
-                max_index = index+len(bytes)+1
+                schema += bytes
+                max_index = index + len(bytes) + 1
         else:
-            schema+='x'
+            schema += "x"
     return schema[0:max_index]
 
 
@@ -230,12 +253,12 @@ def __params(fields):
 
 
 def python_type_name(field: schema.Field):
-    if 'int' in field.type.name:
-        return 'int'
-    elif field.type.name == 'float32' or field.type.name == 'float64':
-        return 'float'
+    if "int" in field.type.name:
+        return "int"
+    elif field.type.name == "float32" or field.type.name == "float64":
+        return "float"
     elif isinstance(field.type, schema.BitSet):
-        return 'bin'
+        return "bin"
     else:
         return field.type.name
 
@@ -246,9 +269,13 @@ def __bitset_unpack(msg_name, msg, field, index):
     reversed_bytes = reversed(bytes)
     for (byte, reversed_byte) in zip(bytes, reversed_bytes):
         if isinstance(field.type, schema.BitSet):
-            deserialized.append(f"(unpack(\"{ __custom_unpack_schema(msg_name, msg, field.name) }\", data[0:{ index+field.byte_size }])[{ byte }] << { reversed_byte*8 })")
+            deserialized.append(
+                f'(unpack("{ __custom_unpack_schema(msg_name, msg, field.name) }", data[0:{ index+field.byte_size }])[{ byte }] << { reversed_byte*8 })'
+            )
         else:
-            deserialized.append(f"{python_type_name(field)}((unpack(\"{ __custom_unpack_schema(msg_name, msg, field.name) }\", data[0:{ index+field.byte_size }])[{ byte }] << { byte*8 }))")
+            deserialized.append(
+                f'{python_type_name(field)}((unpack("{ __custom_unpack_schema(msg_name, msg, field.name) }", data[0:{ index+field.byte_size }])[{ byte }] << { byte*8 }))'
+            )
     return deserialized
 
 
@@ -258,7 +285,9 @@ def __fields_serialization(message, messages_size):
     if len(message.fields) != 0:
         serializated_fields.append("data = bytearray()")
         msg = messages_size[message.name]
-        serializated_fields.append(f"data.extend(pack(\"{__packing_schema(message.name, msg)}\", {', '.join(__pack_fields(msg)) }))")
+        serializated_fields.append(
+            f"data.extend(pack(\"{__packing_schema(message.name, msg)}\", {', '.join(__pack_fields(msg)) }))"
+        )
         serializated_fields.append("return data")
     else:
         serializated_fields.append("return bytearray()")
@@ -274,12 +303,25 @@ def __fields_deserialization(message, messages_size):
             msg = messages_size[message.name]
             index = __lookup_msg_index(message.name, field.name, messages_size)
             if isinstance(field.type, schema.BitSet):
-                deserializated_fields.append(f"self.{field.name} = bin({' | '.join(__bitset_unpack(message.name, msg, field, index))})")
+                deserializated_fields.append(
+                    f"self.{field.name} = bin({' | '.join(__bitset_unpack(message.name, msg, field, index))})"
+                )
             elif field.shift == 0:
-                deserializated_fields.append(f"self.{field.name} = {python_type_name(field)}(unpack(\"{__custom_unpack_schema(message.name, msg, field.name)}\", data[0:{index+field.byte_size}])[0])")
+                deserializated_fields.append(
+                    f'self.{field.name} = {python_type_name(field)}(unpack("{__custom_unpack_schema(message.name, msg, field.name)}", data[0:{index+field.byte_size}])[0])'
+                )
             else:
-                deserializated_fields.append(f"self.{field.name} = {python_type_name(field)}((unpack(\"{__custom_unpack_schema(message.name, msg, field.name)}\", data[0:{index+field.byte_size}])[0] & {field.bit_mask}) >> {field.shift})")
+                deserializated_fields.append(
+                    f'self.{field.name} = {python_type_name(field)}((unpack("{__custom_unpack_schema(message.name, msg, field.name)}", data[0:{index+field.byte_size}])[0] & {field.bit_mask}) >> {field.shift})'
+                )
     else:
         deserializated_fields.append("pass")
 
     return deserializated_fields
+
+
+def __already_timestamp(fields):
+    if any(field.name == "timestamp" for field in fields):
+        return True
+    else:
+        return False

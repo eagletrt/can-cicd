@@ -36,9 +36,11 @@ class {{ utils.to_camel_case(message.name,"_") }}Msg:
     def __init__({{ ", ".join(params(message.fields)) }}):
     {%- if len(message.fields) != 0 %}
         {%- for field in message.fields %}
-        if {{ field.name }} is not None:
-            self.{{ field.name }} = {{ python_type_name(field) }}({{ field.name }})
+        self.{{ field.name }} = {{ python_type_name(field) }}({{ field.name }}) if {{ field.name }} is not None else None
         {%- endfor %}
+    {%- endif %}
+    {%- if not already_timestamp(message.fields) %}
+        self.timestamp=int()
     {%- endif %}
         self.size = {{ message.size }}
     {%- if message.frequency != -1 %}

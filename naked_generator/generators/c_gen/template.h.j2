@@ -118,6 +118,9 @@ typedef struct __is_packed {
     {%- for field in message.fields %}
     {{ casts(field.type.name) }} {{ field.name }};
     {%- endfor %}
+    {%- if not already_timestamp(message.fields) %}
+    uint32_t timestamp;
+    {%- endif %}
 } {{ utils.to_camel_case(message.name,"_") }}Msg;
 
 {% endfor -%}
