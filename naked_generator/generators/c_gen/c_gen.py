@@ -33,7 +33,7 @@ def generate(filename: str, schema: schema.Schema, output_path: str):
         )
 
     with open(f"{output_path}/test.c", "w") as f:
-        f.write(__generate_test_c(filename, schema.messages, enums, bitsets))
+        f.write(__generate_test_c(filename, schema.messages))
 
 
 def __generate_h(filename, messages, messages_size, enums, bitsets):
@@ -57,12 +57,13 @@ def __generate_h(filename, messages, messages_size, enums, bitsets):
         fields_deserialization=__fields_deserialization,
         utils=utils,
         already_timestamp=__already_timestamp,
+        parameters=__parameters,
     )
 
     return code
 
 
-def __generate_test_c(filename, messages, enums, bitsets):
+def __generate_test_c(filename, messages):
     """
     Generates C source file for tests
     """
@@ -126,14 +127,6 @@ def __printf_arguments_cast(message, name: str):
     return fields
 
 
-def __fields(struct):
-    return [
-        field_name
-        for field_name, field_type in struct.fields.items()
-        if not isinstance(field_type, s.Padding)
-    ]
-
-
 def __convert(field, index):
     return [
         f"(data[{index+number_index+1}] << {8*(number_index+1)})"
@@ -141,11 +134,11 @@ def __convert(field, index):
     ]
 
 
-def __params(fields):
+def __params(fields, struct_info):
     return [
-        f"msg->{field.name} << {field.shift}"
+        f"{struct_info}{field.name} << {field.shift}"
         if field.shift != 0
-        else f"msg.{field.name}"
+        else f"{struct_info}{field.name}"
         for field in fields
     ]
 
@@ -240,8 +233,9 @@ def __float_deserialize(field, index):
     return [f"data[{index+byte_index}]" for byte_index in range(field.bit_size // 8)]
 
 
-def __fields_serialization(index, fields):
+def __fields_serialization(index, fields, struct: bool):
     serializated_fields = []
+    struct_info = "msg->" if struct else ""
 
     if fields:
         if len(fields) == 1 and fields[0].bit_size >= 8:
@@ -249,26 +243,30 @@ def __fields_serialization(index, fields):
             if isinstance(field.type, schema.BitSet):
                 for bitset_index in range(field.bit_size // 8):
                     serializated_fields.append(
-                        f"data[{index+bitset_index}] = msg->{field.name}[{bitset_index}];"
+                        f"data[{index+bitset_index}] = {struct_info}{field.name}[{bitset_index}];"
                     )
             elif isinstance(field.type, schema.Number) and (
                 field.type.name == "float32" or field.type.name == "float64"
             ):
                 for byte_index in range(field.bit_size // 8):
                     serializated_fields.append(
-                        f"data[{index+byte_index}] = (({__casts(field.type.name)}_t) msg->{field.name}).bytes[{byte_index}];"
+                        f"data[{index+byte_index}] = (({__casts(field.type.name)}_t) {struct_info}{field.name}).bytes[{byte_index}];"
                     )
             elif field.bit_size > 8:
-                serializated_fields.append(f"data[{index}] = msg->{field.name} & 255;")
+                serializated_fields.append(
+                    f"data[{index}] = {struct_info}{field.name} & 255;"
+                )
                 for number_index in range(1, field.bit_size // 8):
                     serializated_fields.append(
-                        f"data[{index+number_index}] = (msg->{field.name} >> {number_index*8}) & 255;"
+                        f"data[{index+number_index}] = ({struct_info}{field.name} >> {number_index*8}) & 255;"
                     )
             else:
-                serializated_fields.append(f"data[{index}] = msg->{field.name};")
+                serializated_fields.append(
+                    f"data[{index}] = {struct_info}{field.name};"
+                )
         else:
             serializated_fields.append(
-                f"data[{index}] = {' | '.join(__params(fields))};"
+                f"data[{index}] = {' | '.join(__params(fields, struct_info))};"
             )
 
     return serializated_fields
@@ -323,3 +321,13 @@ def __already_timestamp(fields):
         return True
     else:
         return False
+
+
+def __parameters(messages, message_name):
+    msg = [msg for msg in messages if msg.name == message_name][0]
+    if len(msg.fields) != 0:
+        return ", " + f", ".join(
+            [f"{__casts(field.type.name)} {field.name}" for field in msg.fields]
+        )
+    else:
+        return ""

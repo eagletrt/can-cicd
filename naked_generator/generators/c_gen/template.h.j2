@@ -126,9 +126,17 @@ typedef struct __is_packed {
 {% endfor -%}
 // Functions
 {% for message_name, message_index in messages_size.items() %}
-void serialize_{{ utils.to_camel_case(message_name,"_") }}(uint8_t *data, {{ utils.to_camel_case(message_name,"_") }}Msg *msg){
+void serialize_{{ utils.to_camel_case(message_name,"_") }}Msg(uint8_t *data, {{ utils.to_camel_case(message_name,"_") }}Msg *msg){
     {%- for index, fields in message_index.items() -%}
-        {%- for field in fields_serialization(index, fields) %}
+        {%- for field in fields_serialization(index, fields, struct=True) %}
+    {{ field }}
+        {%- endfor %}
+    {%- endfor %}
+}
+
+void serialize_{{ utils.to_camel_case(message_name,"_") }}(uint8_t *data{{ parameters(messages, message_name) }}){
+    {%- for index, fields in message_index.items() -%}
+        {%- for field in fields_serialization(index, fields, struct=False) %}
     {{ field }}
         {%- endfor %}
     {%- endfor %}

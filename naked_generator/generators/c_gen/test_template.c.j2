@@ -13,7 +13,7 @@ int main() {
     {% if len(message.fields) > 0 %}
     printf("Before: {{ " ".join(printf_cast(message.fields)) }}\n", {{ ", ".join(printf_arguments_cast(message,"s")) }});
     {% endif %}
-    serialize_{{ utils.to_camel_case(message.name,"_") }}(buffer_{{ utils.to_camel_case(message.name,"_") }}, &{{ utils.to_camel_case(message.name,"_") }}_s);
+    serialize_{{ utils.to_camel_case(message.name,"_") }}Msg(buffer_{{ utils.to_camel_case(message.name,"_") }}, &{{ utils.to_camel_case(message.name,"_") }}_s);
     {{ utils.to_camel_case(message.name,"_") }}Msg {{ utils.to_camel_case(message.name,"_") }}_d;
     deserialize_{{ utils.to_camel_case(message.name,"_") }}(buffer_{{ utils.to_camel_case(message.name,"_") }}, &{{ utils.to_camel_case(message.name,"_") }}_d);
     {% if len(message.fields) > 0 %}
