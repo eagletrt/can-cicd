@@ -29,8 +29,12 @@ def create_subtree(path):
                 raise
 
 
-def load_networks(networks_path: pathlib.Path, validation_schema_path: pathlib.Path = None,
-                  ids_path: pathlib.Path = None, ids_validation_schema_path: pathlib.Path = None):
+def load_networks(
+    networks_path: pathlib.Path,
+    validation_schema_path: pathlib.Path = None,
+    ids_path: pathlib.Path = None,
+    ids_validation_schema_path: pathlib.Path = None,
+):
     networks_path = pathlib.Path(networks_path)
 
     networks = []
@@ -44,13 +48,15 @@ def load_networks(networks_path: pathlib.Path, validation_schema_path: pathlib.P
             network_ids_path = ids_path / network_name / "ids.json"
 
         try:
-            networks.append(network.Network(
-                name=network_name,
-                path=network_path,
-                validation_schema=validation_schema_path,
-                ids_path=network_ids_path,
-                ids_validation_schema=ids_validation_schema_path
-            ))
+            networks.append(
+                network.Network(
+                    name=network_name,
+                    path=network_path,
+                    validation_schema=validation_schema_path,
+                    ids_path=network_ids_path,
+                    ids_validation_schema=ids_validation_schema_path,
+                )
+            )
         except Exception as e:
             print(f"Failed to load network {child.name}")
             print(e)

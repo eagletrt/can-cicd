@@ -11,9 +11,14 @@ def load_network(path):
 
 
 class Network:
-    def __init__(self, name: str
-                 , path: pathlib.Path = None, validation_schema: str = None
-                 , ids_path: str = None, ids_validation_schema: str = None):
+    def __init__(
+        self,
+        name: str,
+        path: pathlib.Path = None,
+        validation_schema: str = None,
+        ids_path: str = None,
+        ids_validation_schema: str = None,
+    ):
         self.path = None
         self.ids_path = None
         self.name = name
@@ -27,7 +32,7 @@ class Network:
 
         if path:
             self.load(path, validation_schema)
-        
+
         if ids_path:
             self.load_ids(ids_path, ids_validation_schema)
 
@@ -38,7 +43,7 @@ class Network:
         self.max_payload_size = network["max_payload_size"]
 
         self.types = network["types"] if "types" in network else {}
-        
+
         for message in network["messages"]:
             message_name = message.pop("name")
             split_senders = message.get("split_senders", False)
@@ -58,38 +63,47 @@ class Network:
                     self.messages[generated_msg_name] = msg
             else:
                 self.messages[message_name] = message
-            
-    
-                
+
     def load_ids(self, path: str, validation_schema: str = None):
         self.ids_path = path
-        network_ids = utils.load_json(self.ids_path)#, validation_schema) # TODO: fix
-        assert network_ids["network_version"] == self.version, \
-            f"Version mismatch between {self.path} and {self.ids_path}"
+        network_ids = utils.load_json(self.ids_path)  # , validation_schema) # TODO: fix
+        assert (
+            network_ids["network_version"] == self.version
+        ), f"Version mismatch between {self.path} and {self.ids_path}"
 
-        for topic_name, topic_contents in sorted(network_ids["topics"].items()): 
+        for topic_name, topic_contents in sorted(network_ids["topics"].items()):
             # sorted() NEEDED for consistency across runs
             if "id" in topic_contents:
                 self.topics[topic_name] = topic_contents["id"]
             else:
                 self.topics[topic_name] = None
-            for message_name, message_contents in sorted(topic_contents["messages"].items()): 
+            for message_name, message_contents in sorted(
+                topic_contents["messages"].items()
+            ):
                 # sorted() NEEDED for consistency across runs
                 self.messages[message_name]["id"] = message_contents["id"]
 
-    def merge_with(self, network: 'Network'):
+    def merge_with(self, network: "Network"):
         if isinstance(network, Network):
             for m1 in network.contents:
-                m2 = self.get_message_by_name(m1['name'])
+                m2 = self.get_message_by_name(m1["name"])
                 if m2:  # message name conflict
-                    print("Message with same name {0} found in networks {1} and {2}"
-                          .format(m1['name'], self.name, network.name))
-                    print("Checking if the two messages are actually the same message...")
+                    print(
+                        "Message with same name {0} found in networks {1} and {2}".format(
+                            m1["name"], self.name, network.name
+                        )
+                    )
+                    print(
+                        "Checking if the two messages are actually the same message..."
+                    )
                     for (_, m1value), (_, m2value) in zip(m1.items(), m2.items()):
                         # check if messages are actually the same one
                         if m1value != m2value:
-                            raise Exception("Found two incompatible messages with same name {0} in networks {1}, {2}"
-                                            .format(m1['name'], self.name, network.name))
+                            raise Exception(
+                                "Found two incompatible messages with same name {0} in networks {1}, {2}".format(
+                                    m1["name"], self.name, network.name
+                                )
+                            )
                     print("Messages found to be the same, the merge will continue")
             self.messages += network.contents
         else:
@@ -104,19 +118,19 @@ class Network:
 
     def get_messages_by_topic(self, topic):
         """
-            Very resource-heavy, can be optimized with index
+        Very resource-heavy, can be optimized with index
         """
         messages = {}
         for message_name, message_contents in self.messages.items():
             if message_contents["topic"] != topic:
                 continue
             messages[message_name] = message_contents
-            
+
         return messages
 
     def get_messages_with_fixed_id(self) -> {}:
         """
-            Very resource-heavy, can be optimized with index
+        Very resource-heavy, can be optimized with index
         """
         messages = {}
         for message_name, message_contents in self.messages.items():
@@ -127,7 +141,7 @@ class Network:
 
     def get_reserved_ids(self) -> {}:
         """
-            Very resource-heavy, can be optimized with index
+        Very resource-heavy, can be optimized with index
         """
         ids = {}
         for message_name, message_contents in self.get_messages_with_fixed_id().items():
@@ -140,7 +154,7 @@ class Network:
             return self.messages[name]
         except KeyError:
             return {}
-        
+
     def get_types(self):
         return self.types
 

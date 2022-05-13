@@ -12,6 +12,7 @@ def generate(schema: Schema, filename, output_path):
     with open(f"{output_path}/{filename}.proto", "w") as f:
         f.write(__generate_proto(filename, enums, structs))
 
+
 def __generate_proto(filename, enums, structs):
     with open(__PROTO_TEMPLATE_, "r") as f:
         skeleton_py = f.read()
@@ -38,5 +39,5 @@ def __parse_schema(schema: Schema):
     enums = {k: v for k, v in schema.types.items() if isinstance(v, Enum)}
     structs = schema.structs
     # print([struct.fields for struct in schema.structs])
-    
+
     return enums, structs

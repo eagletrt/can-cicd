@@ -4,6 +4,7 @@ from .generators.py_gen import py_gen
 from .generators.c_gen import c_gen
 from .lib.network import Network
 
+
 def generate_code(file_name, schema, output_dir_network: pathlib.Path):
 
     if True:  # Generate python

@@ -10,9 +10,7 @@ def generate_ids_include(network: Network):
     with open(__TEMPLATE_IDS_H, "r") as f:
         ids_h = f.read()
 
-    code = j2.Template(ids_h).render(
-        network=network
-    )
+    code = j2.Template(ids_h).render(network=network)
 
     return code
 
@@ -24,12 +22,13 @@ def generate_utils_include(network: Network):
     # Calculate maximum message name length
     msg_name_max_length = 1  # Minimum message name length must be at least 1
     for message_name, _ in network.get_messages().items():
-        if len(message_name) + 1 > msg_name_max_length: # 1 is added because of C strings (last char is '\0') 
+        if (
+            len(message_name) + 1 > msg_name_max_length
+        ):  # 1 is added because of C strings (last char is '\0')
             msg_name_max_length = len(message_name) + 1
 
     code = j2.Template(utils_h).render(
-        network=network,
-        msg_name_max_length=msg_name_max_length
+        network=network, msg_name_max_length=msg_name_max_length
     )
 
     return code

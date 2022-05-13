@@ -38,7 +38,7 @@ def generate_data():
 
 def find_structs(header_file):
     structs = []
-    
+
     inside_struct = False
     struct = ""
     for line in header_file.split("\n"):
@@ -49,9 +49,13 @@ def find_structs(header_file):
         if inside_struct:
             if "}" in line:
                 struct_name = line.replace("} ", "").replace(";", "")
-                struct_field_types = [x.strip().split(" ")[0].strip() for x in struct.split(";") if x]
-                struct_field_names = [x.strip().split(" ")[1].strip() for x in struct.split(";") if x]
-                
+                struct_field_types = [
+                    x.strip().split(" ")[0].strip() for x in struct.split(";") if x
+                ]
+                struct_field_names = [
+                    x.strip().split(" ")[1].strip() for x in struct.split(";") if x
+                ]
+
                 structs.append((struct_name, struct_field_types, struct_field_names))
                 # Clean
                 inside_struct = False
@@ -86,7 +90,7 @@ def generate_read_struct(struct_instance_name, field_names, field_types, is_poin
         select = "->"
     else:
         select = "."
-    
+
     read_struct = ""
     for field_name, field_type in zip(field_names, field_types):
         if field_type in ["uint8_t", "uint16_t", "uint32_t", "uint64_t"]:
@@ -106,46 +110,61 @@ def generate_struct_values(field_types):
     for value in field_types:
         # Unsigned
         if "uint8_t" == value:
-            values.append(random.randint(0, 2**8-1))
+            values.append(random.randint(0, 2**8 - 1))
         elif "uint16_t" == value:
-            values.append(random.randint(0, 2**16-1))
+            values.append(random.randint(0, 2**16 - 1))
         elif "uint32_t" == value:
-            values.append(random.randint(0, 2**32-1))
+            values.append(random.randint(0, 2**32 - 1))
         elif "uint64_t" == value:
-            values.append(random.randint(0, 2**64-1))
+            values.append(random.randint(0, 2**64 - 1))
         # Signed
         elif "int8_t" == value:
-            values.append(random.randint(-(2**4-1), 2**4-1))
+            values.append(random.randint(-(2**4 - 1), 2**4 - 1))
         elif "int16_t" == value:
-            values.append(random.randint(-(2**8-1), 2**8-1))
+            values.append(random.randint(-(2**8 - 1), 2**8 - 1))
         elif "int32_t" == value:
-            values.append(random.randint(-(2**16-1), 2**32-1))
+            values.append(random.randint(-(2**16 - 1), 2**32 - 1))
         elif "int64_t" == value:
-            values.append(random.randint(-(2**32-1), 2**32-1))
+            values.append(random.randint(-(2**32 - 1), 2**32 - 1))
         # Float
         elif "float32" == value:
-            values.append(2/(1+random.randint(0, 2**23-1))*2**random.randint(-126, 127))  # float32
+            values.append(
+                2
+                / (1 + random.randint(0, 2**23 - 1))
+                * 2 ** random.randint(-126, 127)
+            )  # float32
         elif "float64" == value:
-            values.append(2/(1+random.randint(0, 2**23-1))*2**random.randint(-126, 127))  # float32
+            values.append(
+                2
+                / (1 + random.randint(0, 2**23 - 1))
+                * 2 ** random.randint(-126, 127)
+            )  # float32
         # Bool
         elif "bool" == value:
             values.append(random.randint(0, 1))
         # Enum
         else:
-            values.append(random.randint(0, 2**4-1))
+            values.append(random.randint(0, 2**4 - 1))
     return values
 
 
 def read_args(argv):
     # TODO: standardize
     if len(argv) != 3 or argv[1] in ["--help", "-h"]:
-        raise ValueError("Usage: python3 main.py <naked_generator_output_dir> <output_path>")
+        raise ValueError(
+            "Usage: python3 main.py <naked_generator_output_dir> <output_path>"
+        )
 
     naked_generator_output_dir = pathlib.Path(argv[1])
     output_dir = pathlib.Path(argv[2])
 
-    if not naked_generator_output_dir.exists() or not naked_generator_output_dir.is_dir():
-        raise ValueError(f"Path {naked_generator_output_dir} does not exist or it is not a directory")
+    if (
+        not naked_generator_output_dir.exists()
+        or not naked_generator_output_dir.is_dir()
+    ):
+        raise ValueError(
+            f"Path {naked_generator_output_dir} does not exist or it is not a directory"
+        )
 
     if output_dir.is_file():
         raise ValueError(f"Path {output_dir} is a file")
@@ -155,7 +174,7 @@ def read_args(argv):
 
 def main():
     # TODO: use template
-    #with open("tests/skeleton.c", "r") as f:
+    # with open("tests/skeleton.c", "r") as f:
     #    skeleton_c = f.read()
 
     naked_generator_output_dir, output_dir = read_args(sys.argv)
@@ -173,19 +192,21 @@ def main():
             include_path = header_name.name.replace(".h", ".c")
 
             source_paths += include_path + " "
-            includes += f"#include \"{include_path}\"\n"
+            includes += f'#include "{include_path}"\n'
 
         output_dir = naked_generator_output_dir / network_name / "c"
         output_file_name = "test.c"
         utils.create_subtree(output_dir)
 
         print(f"====== RUNNING C TESTS FOR {network_name}  ======")
-        stdout, stderr, err_code = utils.run_command(COMPILE_AND_RUN.format(
-            input_file=output_file_name,
-            output_dir=output_dir.absolute(),
-            output_file="test",
-            headers=source_paths),
-            verbose=True
+        stdout, stderr, err_code = utils.run_command(
+            COMPILE_AND_RUN.format(
+                input_file=output_file_name,
+                output_dir=output_dir.absolute(),
+                output_file="test",
+                headers=source_paths,
+            ),
+            verbose=True,
         )
 
         print(stdout.strip())
